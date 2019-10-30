@@ -1,1 +1,1 @@
-true: package(oUnit),package(unix),package(ANSITerminal),package(uutf)
+true: package(oUnit),package(unix),package(ANSITerminal)
