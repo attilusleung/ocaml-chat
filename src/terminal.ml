@@ -70,7 +70,6 @@ let update () =
   match input () with
   | None -> ()
   | Some c ->
-    print_endline "hmm";
     InputPanel.update input_panel c; ()
 
 let rec loop () =
