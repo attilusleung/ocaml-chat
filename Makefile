@@ -1,4 +1,4 @@
-MODULES=src/doublyLinkedList
+MODULES=src/doublyLinkedList src/terminal src/panel
 OBJECTS=$(MODULES:=.cmo)
 MLS=$(MODULES:=.ml)
 MLIS=$(MODULES:=.mli)
@@ -7,3 +7,6 @@ OCAMLBUILD=ocamlbuild -use-ocamlfind
 
 build:
 	$(OCAMLBUILD) $(OBJECTS)
+
+term:
+	$(OCAMLBUILD) src/terminal.native
