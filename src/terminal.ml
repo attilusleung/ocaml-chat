@@ -2,13 +2,9 @@ open Array
 open ANSITerminal
 open Unix
 open Panel
+open Key
 
 let termios = tcgetattr stdin
-
-(*
-   let test_panel = Panel.make 0 0 20 50
-   let test_panel_2 = Panel.make 30 0 20 50
-*)
 
 let input_panel = InputPanel.make 0 0 80 3
 
@@ -30,17 +26,11 @@ let setraw () =
 let unsetraw () =
   tcsetattr stdout TCSANOW termios
 
+let log_file = open_out "log.txt"
+
 
 let flush_screen buffer size =
   begin
-    (* print_endline @@ string_of_int (fst s) ^ " " ^ string_of_int (snd s); *)
-    (*
-       for i = 0 to (snd s)-1 do
-         for j = 0 to (fst s)-1 do
-           b.(j).(i) <- "x"
-         done
-       done;
-    *)
   for i = 0 to (snd size)-1 do
     for j = 0 to (fst size)-1 do
       Stdlib.print_string buffer.(j).(i)
@@ -50,45 +40,63 @@ let flush_screen buffer size =
   restore_cursor ()
 
 let draw () =
-  save_cursor ();
-  set_cursor 1 1;
   let s = size () in
   let b = make_matrix (fst s) (snd s) " " in
   begin
-    (* draw_border test_panel b false; *)
     InputPanel.draw input_panel b false;
-    flush_screen b s
+    (* save_cursor (); *)
+    set_cursor 1 1;
+    flush_screen b s;
+    let cursorx, cursory  = InputPanel.get_cursor input_panel in
+    set_cursor cursorx cursory
   end
+
+let rec get_escaped seq =
+  (* Buffer.add_char seq (input_char Stdlib.stdin); *)
+  try
+    match seq ^ String.make 1 (input_char Stdlib.stdin) with
+    | "\x1b[A" -> Up
+    | "\x1b[B" -> Down
+    | "\x1b[C" -> Right
+    | "\x1b[D" -> Left
+    | "\x1b[3" -> get_escaped "\x1b[3"
+    | "\x1b[3~" -> Delete
+    (* | _ -> Buffer.to_seq seq |> Seq.fold_left (fun a b -> String.make 1 b :: a)  [] *)
+    | _ -> Escape
+  with End_of_file -> Escape
 
 let input () =
   try
-    let c = input_byte Stdlib.stdin in
-    Some c
-  with End_of_file -> None
+    (* output_string log_file "getting input"; *)
+    let c = input_char Stdlib.stdin in
+    begin
+      (* output_string log_file "done input"; *)
+    match c with
+    | '\x1b' -> let second = (input_char Stdlib.stdin) in
+      if second = '[' then get_escaped "\x1b["
+      else Escape
+    | ' '..'~' as c -> Char c
+    | '\x7f' -> Backspace
+    | '\x08' -> VimLeft
+    | '\x0a' -> VimDown
+    | '\x0b' -> VimUp
+    | '\x0c' -> VimRight
+    | _ -> Null
+    end
+  with End_of_file -> Null
+    (* Null *)
 
 let update () =
-  match input () with
-  | None -> ()
-  | Some c ->
-    InputPanel.update input_panel c; ()
+  let i = input () in
+  match i with
+  | Null -> ()  (* output_string log_file "empty" *)
+  | c ->
+    InputPanel.update input_panel c (* ; output_string log_file "please" *)
 
 let rec loop () =
   erase Screen;
   draw ();
-  restore_cursor ();
-  (*
-     (try
-       (match input_byte Stdlib.stdin with
-         | 104 -> move_cursor ~-1 0
-         | 106 -> move_cursor 0 1
-         | 107 -> move_cursor 0 ~-1
-         | 108 -> move_cursor 1 0
-         | _ -> ());
-  *)
-    (* print_int c; *)
-    (* set_cursor 1 2; *)
   update ();
-  (* with End_of_file -> ()); *)
   loop ()
 
 let () =

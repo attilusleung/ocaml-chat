@@ -1,5 +1,6 @@
 open Unix
 open ANSITerminal
+open Key
 
 (*
    module type Panel = sig
@@ -63,12 +64,15 @@ module InputPanel = struct
   open Panel
   type t = { base: Panel.t
            ; buffer: Buffer.t
-           ; }
+           ; mutable cursor: int
+           ; mutable length: int}
 
   let make x y width height =
     assert (height > 2);
     { base= Panel.make x y width height
-    ; buffer= Buffer.create width }
+    ; buffer= Buffer.create width
+    ; cursor= 0
+    ; length= 0}
 
   let draw_input t buffer =
     Buffer.to_seqi t.buffer
@@ -77,10 +81,59 @@ module InputPanel = struct
 
   let draw t buffer strong =
     draw_border t.base buffer strong;
-    draw_input t buffer
+    draw_input t buffer;
+    set_cursor (5) (5)
+
+  let get_cursor t =
+    t.base.x + 2 + t.cursor, t.base.y + 2
+
+  let add buffer i length c =
+    if i = length then
+      Buffer.add_char buffer c
+    else
+      let temp = Buffer.sub buffer i (length - i) in
+      begin
+        Buffer.truncate buffer (i + 1);
+        Buffer.add_char buffer c;
+        Buffer.add_string buffer temp
+      end
+
+  let remove buffer i length =
+    begin
+      if i = length - 1 then Buffer.truncate buffer (length - 1)
+      else
+        let temp = Buffer.sub buffer (i + 1) (length - i - 1) in
+        Buffer.truncate buffer i;
+        Buffer.add_string buffer temp
+    end
 
   let update t input =
-    if input > 127 then () else
-      Buffer.add_char t.buffer @@ char_of_int input
+    match input with
+    | Char c ->
+      (* TODO: What do we do if the message length is larger than box width? *)
+      add t.buffer t.cursor t.length c;
+      t.cursor <- t.cursor + 1;
+      t.length <- t.length + 1
+    | Backspace ->
+      if t.cursor > 0 then
+        begin
+          remove t.buffer (t.cursor - 1) t.length;
+          t.length <- t.length - 1;
+          t.cursor <- t.cursor - 1
+        end
+    | Delete ->
+      if t.cursor < t.length then
+        begin
+          remove t.buffer t.cursor t.length;
+          t.length <- t.length -1;
+        end
+    | Left ->
+      if t.cursor > 0 then
+        t.cursor <- t.cursor - 1
+    | Right ->
+      if t.cursor < t.length then
+        t.cursor <- t.cursor + 1
+    | Up | Down | Null | Escape -> ()
+    (* | _ -> () *)
 
 end
