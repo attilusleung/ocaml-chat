@@ -1,4 +1,4 @@
-MODULES=src/doublyLinkedList src/terminal src/panel
+MODULES=src/doublyLinkedList src/terminal src/panel src/key
 OBJECTS=$(MODULES:=.cmo)
 MLS=$(MODULES:=.ml)
 MLIS=$(MODULES:=.mli)

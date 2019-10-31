@@ -1,0 +1,11 @@
+S src
+S src/tests
+B _build
+B _build/src
+B _build/src/tests
+
+PKG oUnit
+PKG ocamlbuild
+PKG Unix
+PKG ANSITerminal
+PKG Camomile
