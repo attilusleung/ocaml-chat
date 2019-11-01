@@ -9,4 +9,4 @@ build:
 	$(OCAMLBUILD) $(OBJECTS)
 
 term:
-	$(OCAMLBUILD) src/terminal.native
+	$(OCAMLBUILD) src/terminal.native && ./terminal.native
