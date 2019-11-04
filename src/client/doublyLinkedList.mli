@@ -9,8 +9,14 @@
 
 (** The abstract type of values representing the doubly linked list *)
 type 'a t
+(* type 'a entry = *)
+(*   { value: 'a; mutable backptr: 'a entry list option } *)
+(*  *)
+(* type 'a t = 'a entry list *)
 
 val empty: 'a t
+
+val is_empty: 'a t -> bool
 
 val insert: 'a -> 'a t -> 'a t
 
@@ -20,8 +26,12 @@ val get_value: 'a t -> 'a
 
 val prev: 'a t -> 'a t
 
+val prev_opt: 'a t -> 'a t option
+
 val previ: 'a t -> int -> 'a t
 
 val next: 'a t -> 'a t
+
+val next_opt: 'a t -> 'a t option
 
 val nexti: 'a t -> int -> 'a t

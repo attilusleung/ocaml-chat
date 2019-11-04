@@ -1,4 +1,8 @@
 (* TODO: Replace all failwith with actual exceptions *)
+open Log
+
+exception EndOfList
+exception EmptyList
 
 type 'a entry =
   { value: 'a; mutable backptr: 'a entry list option }
@@ -38,6 +42,8 @@ let rep_ok t =
       in
       pointer_ok t
 
+let is_empty t = t = empty
+
 let insert value t =
   let l = {value= value; backptr= None}::t in
   (match t with
@@ -50,29 +56,45 @@ let to_singly_list t =
 
 let get_value t =
   match t with
-  | [] -> failwith "empty"
+  | [] -> raise EmptyList
   | h::t -> h.value
 
 let prev t =
   match t with
-  | [] -> failwith "list empty"
-  | {backptr= None}::_ -> failwith "already head"
+  | [] -> raise EmptyList
+  | {backptr= None}::_ -> raise EndOfList
   | {backptr= Some p}::_ -> p
+
+let prev_opt t =
+  try
+    Some (prev t)
+  with
+  | EndOfList -> None
+  | EmptyList -> None
 
 let rec previ t i =
   if i = 0 then t
   else match t with
     | {backptr= Some b}::_ -> previ b (i-1)
-    | {backptr= None}::_ -> failwith "end of list"
-    | [] -> failwith "RI violated"
+    | {backptr= None}::_ -> raise EndOfList
+    | [] -> raise EmptyList
 
 let next t =
   match t with
-  | [] -> failwith "list empty"
+  | [] -> raise EmptyList
+  | h::[] -> raise EndOfList
   | h::t -> t
+
+let next_opt t =
+  try
+    Some (next t)
+  with
+  | EndOfList -> None
+  | EmptyList -> None
 
 let rec nexti t i =
   if i = 0 then t
   else match t with
-    | [] -> failwith "end of list"
+    | [] -> raise EmptyList
+    | h::[] -> raise EndOfList
     | h::t -> nexti t (i-1)
