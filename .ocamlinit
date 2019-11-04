@@ -1,0 +1,7 @@
+#directory "_build/src/client";;
+#directory "_build/src/server";;
+#require "unix";;
+#require "lwt";;
+#require "lwt.unix";;
+#thread;;
+#load_rec  "network.cmo";;
