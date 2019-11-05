@@ -1,6 +1,7 @@
 open Lwt
 open Lwt_io
 open Printexc
+open Parser
 
 exception ClosedConnection
 
@@ -31,10 +32,11 @@ let backlog = 5
 let rec handle_connection ic oc id () =
   let%lwt line = read_line_opt ic in
   match line with
-  | Some msg ->
-    Lwt_io.write_line stdout @@ "recieved: \"" ^ msg ^ "\" from " ^ id
+  | Some msg -> 
+    Lwt_io.write_line stdout @@ 
+    "received: \"" ^ msg ^ "\" from " ^ id
     >>= fun () ->
-    Lwt_io.write_line oc "recieved" >>= handle_connection ic oc id
+    Lwt_io.write_line oc msg >>= handle_connection ic oc id
   | None ->
     Lwt_io.write_line stdout @@ "connection " ^ id ^ " terminated"
     >>= fun () -> fail ClosedConnection

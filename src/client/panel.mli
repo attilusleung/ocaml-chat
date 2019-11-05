@@ -17,6 +17,6 @@ end
 
 module MessagePanel : sig
   type t
-  val make: int -> int -> int -> int -> t * string DoublyLinkedList.t ref
+  val make: int -> int -> int -> int -> t * Parser.t DoublyLinkedList.t ref
   val draw: t -> string array array -> bool -> unit
 end

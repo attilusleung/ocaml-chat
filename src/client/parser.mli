@@ -1,4 +1,4 @@
 
-type t = {user : string; time : string; message : string}
+type t = {time : string; user : string; message : string}
 
 val parse : string -> t

@@ -5,6 +5,7 @@ open Network
 open Lwt
 open Log
 open Printexc
+open Parser
 
 exception PanelWidthTooLarge
 
@@ -157,7 +158,7 @@ module MessagePanel = struct
 
   type t =
     { base: Panel.t
-    ; logs: string DoublyLinkedList.t ref (* TODO: shouldn't be string *) }
+    ; logs: Parser.t DoublyLinkedList.t ref }
 
   let make x y width height =
     let logs = ref DoublyLinkedList.empty in
@@ -174,7 +175,7 @@ module MessagePanel = struct
         for i = 1 to t.base.height - 2 do
           (* TODO: overflow *)
           let value = DoublyLinkedList.get_value !current in
-          String.to_seqi value
+          String.to_seqi value.message
           |> Seq.iter (fun (j, c) ->
               buffer.(j + 1).(t.base.y + t.base.height - 1 - i) <-
                 String.make 1 c) ;
