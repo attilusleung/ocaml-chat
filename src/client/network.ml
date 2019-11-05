@@ -15,15 +15,10 @@ type connection =
   ; in_channel: Lwt_io.input_channel
   ; out_channel: Lwt_io.output_channel }
 
-(* ; id: string} *)
-
 let rec while_connect sock server_address =
   catch
     (fun _ -> Lwt_unix.connect sock server_address)
     (fun _ -> while_connect sock server_address)
-
-(* Lwt.on_failure (Lwt_unix.connect sock server_address) (fun e -> *)
-(*     while_connect sock server_address) *)
 
 let create_connection () =
   Lwt_unix.(
@@ -35,13 +30,7 @@ let create_connection () =
       { socket= sock
       ; in_channel= Lwt_io.of_fd Lwt_io.Input sock
       ; out_channel=
-          Lwt_io.of_fd Lwt_io.Output sock
-          (* ; id=  *)
-          (* match sa with *)
-          (* | Unix.ADDR_INET (a, p) -> *)
-          (*   Unix.string_of_inet_addr a ^ ":" ^ string_of_int p *)
-          (* | Unix.ADDR_UNIX _ -> *)
-          (*   failwith "unreachable code" *) })
+          Lwt_io.of_fd Lwt_io.Output sock })
 
 let send_msg conn msg = write_line conn.out_channel msg
 

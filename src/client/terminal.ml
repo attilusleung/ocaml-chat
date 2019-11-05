@@ -44,7 +44,6 @@ let rec draw () =
   let b = make_matrix (fst s) (snd s) " " in
   InputPanel.draw input_panel b false ;
   MessagePanel.draw msg_panel b false ;
-  (* save_cursor (); *)
   set_cursor 1 1 ;
   flush_screen b s ;
   let cursorx, cursory = InputPanel.get_cursor input_panel in
@@ -57,7 +56,6 @@ let get_char_stdin () =
     ; Lwt_unix.sleep 0.1 >>= fun _ -> return '\x00' ]
 
 let rec get_escaped seq =
-  (* Buffer.add_char seq (input_char Stdlib.stdin); *)
   try
     let%lwt c = get_char_stdin () in
     match seq ^ String.make 1 c with
@@ -73,7 +71,6 @@ let rec get_escaped seq =
       get_escaped "\x1b[3"
     | "\x1b[3~" ->
       return Delete
-    (* | _ -> Buffer.to_seq seq |> Seq.fold_left (fun a b -> String.make 1 b :: a)  [] *)
     | _ ->
       return Escape
   with End_of_file -> return Escape
@@ -104,30 +101,11 @@ let parse_input c =
 
 let input () =
   get_char_stdin () >>= parse_input
-    (* output_string log_file "getting input"; *)
-    (* let c = input_char Stdlib.stdin in *)
-    (* output_string log_file "done input"; *)
-
-(* Null *)
 
 let rec term_update conn () =
-  (* erase Screen ; *)
   draw () >>= input
   >>= InputPanel.update input_panel conn
-  (* ; output_string log_file "please" *)
-      (* >>= fun _ -> *)
-      (* msg_log := DoublyLinkedList.insert "hmm" !msg_log; return () *)
   >>= term_update conn
-
-(* let start_msg_update conn () = listen_msg conn msg_log () *)
-
-(*
-   let rec loop conn =
-     let%lwt () = (erase Screen; return ()) in
-     let%lwt () = draw () in
-     let%lwt () = update conn in
-     loop conn
-*)
 
 let start () = let%lwt conn = create_connection () in
   log_out "inited";
@@ -139,7 +117,4 @@ let () =
   set_cursor 1 1 ;
   Stdlib.print_string "connecting to server...";
   flush Stdlib.stdout;
-  (* flush_screen (); *)
-  (* unsetraw(); *)
-  (* Lwt_main.run @@ loop conn *)
   Lwt_main.run @@ start ()

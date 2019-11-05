@@ -6,19 +6,9 @@ open Lwt
 open Log
 open Printexc
 
-(*
-   module type Panel = sig
-     type t
-     val make: int -> int -> int -> int -> t
-     val draw_border: t -> string array array -> bool -> unit
-   end
-*)
-
 exception PanelWidthTooLarge
 
 exception PanelHeightTooLarge
-
-(* let log_file = open_out "log.txt" *)
 
 module Panel = struct
   type t = {x: int; y: int; width: int; height: int}
@@ -148,16 +138,8 @@ module InputPanel = struct
       if t.cursor < t.length then t.cursor <- t.cursor + 1 ;
       return ()
     | Enter ->
-      (* let c = create_connection () in *)
       let msg = Buffer.contents t.buffer in
-      (* output_string log_file "please" ; *)
-      (* output_string log_file msg ; *)
-      (* flush log_file ; *)
-      (* on_failure (send_msg conn "plox") (fun e -> *)
-      (*     output_string log_file @@ "fail to send " ^ msg ^ "\n") ; *)
-      (* Lwt_io.write_line conn.out_channel "plox" ; *)
       ignore @@ send_msg conn msg ;
-      (* Lwt_unix.close c.socket; *)
       Buffer.clear t.buffer ;
       t.cursor <- 0 ;
       t.length <- 0 ;

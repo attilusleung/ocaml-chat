@@ -29,11 +29,6 @@ let backlog = 5
 
 (* https://baturin.org/code/lwt-counter-server/ *)
 let rec handle_connection ic oc id () =
-  (* Lwt_io.read_line_opt ic >>= *)
-  (* (function *)
-  (*   | Some msg -> print_endline "something" >>= connection ic oc *)
-  (*   | None -> print_endline "end" >>= return *)
-  (* ) *)
   let%lwt line = read_line_opt ic in
   match line with
   | Some msg ->
@@ -43,8 +38,6 @@ let rec handle_connection ic oc id () =
   | None ->
     Lwt_io.write_line stdout @@ "connection " ^ id ^ " terminated"
     >>= fun () -> fail ClosedConnection
-
-(* let accept_connection conn =  *)
 
 let accept_connection active conn =
   let fd, sa = conn in
@@ -99,7 +92,6 @@ let create_server sock =
 let create_socket () =
   Lwt_unix.(
     let sock = socket PF_INET SOCK_STREAM 0 in
-    (* let%lwt () = bind sock @@ ADDR_INET (listen_address, port) in *)
     ignore @@ bind sock @@ ADDR_INET (listen_address, port) ;
     listen sock backlog ;
     sock)
