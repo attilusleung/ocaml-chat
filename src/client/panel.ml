@@ -139,7 +139,7 @@ module InputPanel = struct
       return ()
     | Enter ->
       let msg = Buffer.contents t.buffer in
-      ignore @@ send_msg conn msg ;
+      if msg <> "" then ignore @@ send_msg conn msg ;
       Buffer.clear t.buffer ;
       t.cursor <- 0 ;
       t.length <- 0 ;
