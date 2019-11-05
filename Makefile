@@ -21,5 +21,5 @@ serve:
 	$(OCAMLBUILD) $(SERVELOC)$(SERVE) && ./$(SERVE)
 
 test:
-	# $(OCAMLBUILD) -tag debug src/tests/testParser.native && .src/tests/testParser.native
-	$(OCAMLBUILD) -tag debug src/tests/testNetwork.native && ./testNetwork.native
+	$(OCAMLBUILD) -tag debug src/tests/testParser.native && ./testParser.native
+	# $(OCAMLBUILD) -tag debug src/tests/testNetwork.native && ./testNetwork.native
