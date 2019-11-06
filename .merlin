@@ -1,11 +1,16 @@
 S src
+S src/client
+S src/server
 S src/tests
 B _build
 B _build/src
+B _build/src/client
+B _build/src/server
 B _build/src/tests
 
 PKG oUnit
+PKG ounit-lwt
 PKG ocamlbuild
 PKG Unix
 PKG ANSITerminal
-PKG Camomile
+PKG lwt lwt.unix lwt_ppx

@@ -10,5 +10,6 @@ type key =
   | VimDown
   | VimLeft
   | VimRight
+  | Enter
   | Escape (* of char list *)  (* TODO: Don't eat characters *)
   | Null
