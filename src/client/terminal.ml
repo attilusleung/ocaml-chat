@@ -20,16 +20,17 @@ let setraw () =
     ; c_icanon= false (* ; c_isig=false *)
     ; c_ixon= false
     ; c_icrnl= false
-    ; c_opost= false (* ; c_brkint=false *)
-    }
+    ; c_opost= false
+    ; c_isig= false }
+    (* c_iexten *)
+    (* ; c_brkint=false *)
     (* ; c_inpck=false *)
     (* ; c_vmin= 0 *)
     (* ; c_vtime= 1 } *)
   in
   tcsetattr stdout TCSANOW new_term
 
-let unsetraw () = tcsetattr stdout TCSANOW termios
-
+let unsetraw () = return @@ tcsetattr stdout TCSANOW termios
 
 let flush_screen buffer size =
   for i = 0 to snd size - 1 do
@@ -47,13 +48,12 @@ let rec draw () =
   set_cursor 1 1 ;
   flush_screen b s ;
   let cursorx, cursory = InputPanel.get_cursor input_panel in
-  set_cursor cursorx cursory ;
-  return ()
+  set_cursor cursorx cursory ; return ()
 
 let get_char_stdin () =
   pick
-    [Lwt_io.read_char Lwt_io.stdin
-    ; Lwt_unix.sleep 0.1 >>= fun _ -> return '\x00' ]
+    [ Lwt_io.read_char Lwt_io.stdin
+    ; (Lwt_unix.sleep 0.1 >>= fun _ -> return '\x00') ]
 
 let rec get_escaped seq =
   try
@@ -95,26 +95,33 @@ let parse_input c =
       return VimRight
     | '\x0d' ->
       return Enter
+    | '\x03' ->
+      (* Ctrl- C *)
+      erase Screen ; set_cursor 1 1 ; exit 0
     | _ ->
       return Null
   with End_of_file -> return Null
 
-let input () =
-  get_char_stdin () >>= parse_input
+let input () = get_char_stdin () >>= parse_input
 
 let rec term_update conn () =
-  draw () >>= input
-  >>= InputPanel.update input_panel conn
-  >>= term_update conn
+  draw () >>= input >>= InputPanel.update input_panel conn >>= term_update conn
 
-let start () = let%lwt conn = create_connection () in
-  log_out "inited";
-  ignore @@ term_update conn () ; listen_msg conn msg_log ()
+let rec get_interrupt () =
+  Lwt_io.read_char Lwt_io.stdin
+  >>= function '\x03' -> exit 0 | _ -> get_interrupt ()
+
+let start () =
+  let%lwt conn = pick [create_connection (); get_interrupt ()] in
+  log_out "inited" ;
+  ignore @@ term_update conn () ;
+  listen_msg conn msg_log ()
 
 let () =
   setraw () ;
   erase Screen ;
   set_cursor 1 1 ;
-  Stdlib.print_string "connecting to server...";
-  flush Stdlib.stdout;
+  Stdlib.print_string "connecting to server..." ;
+  flush Stdlib.stdout ;
+  Lwt_main.at_exit (fun _ -> unsetraw ()) ;
   Lwt_main.run @@ start ()
