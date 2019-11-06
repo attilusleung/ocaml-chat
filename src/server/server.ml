@@ -33,8 +33,8 @@ let rec handle_connection ic oc id () =
   let%lwt line = read_line_opt ic in
   match line with
   | Some msg -> 
-    Lwt_io.write_line stdout @@ 
-    "received: \"" ^ msg ^ "\" from " ^ id
+    Lwt_io.write_line stdout @@ msg
+    (* "received: \"" ^ msg ^ "\" from " ^ id *)
     >>= fun () ->
     Lwt_io.write_line oc msg >>= handle_connection ic oc id
   | None ->
