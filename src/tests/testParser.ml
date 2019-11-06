@@ -3,10 +3,10 @@ open Parser
 
 let tests =
   [
-    "parse hello" >:: (fun _ -> 
-        assert_equal 
-          {user = "jasper"; time = "1637"; message = "hello"} 
-          (parse "jasper|1637|hello"));
+    "parse user" >:: (fun _ -> 
+        assert_equal "user1000" (parse "1000|hello").user);
+    "parse message" >:: (fun _ -> 
+        assert_equal "hello" (parse "1000|hello").message);
     "parse invalid string" >:: (fun _ -> 
         assert_raises 
           (Failure "ill-formatted string") 
