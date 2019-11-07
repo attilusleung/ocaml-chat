@@ -3,8 +3,8 @@
 ### Installing OPAM packages
 You will need to install the following opam packages:
 - oUnit
-- ouint-lwt
-- unix
+- ounit-lwt
+- Unix
 - ANSITerminal
 - lwt
 - lwt.unix
