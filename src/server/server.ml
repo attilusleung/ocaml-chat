@@ -33,10 +33,12 @@ let rec handle_connection ic oc id () =
   let%lwt line = read_line_opt ic in
   match line with
   | Some msg -> 
-    Lwt_io.write_line stdout @@ msg
-    (* "received: \"" ^ msg ^ "\" from " ^ id *)
+    let p = parse msg in
+    Lwt_io.write_line stdout @@ 
+    ("received: \"" ^ p.message ^ "\" from " ^ p.user)
     >>= fun () ->
-    Lwt_io.write_line oc msg >>= handle_connection ic oc id
+    Lwt_io.write_line oc msg
+    >>= handle_connection ic oc id
   | None ->
     Lwt_io.write_line stdout @@ "connection " ^ id ^ " terminated"
     >>= fun () -> fail ClosedConnection

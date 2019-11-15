@@ -174,8 +174,8 @@ module MessagePanel = struct
       try
         for i = 1 to t.base.height - 2 do
           (* TODO: overflow *)
-          let value = DoublyLinkedList.get_value !current in
-          String.to_seqi value.message
+          let p = DoublyLinkedList.get_value !current in
+          String.to_seqi ("[" ^ p.time ^ "] " ^ p.user ^ ": " ^ p.message)
           |> Seq.iter (fun (j, c) ->
               buffer.(j + 1).(t.base.y + t.base.height - 1 - i) <-
                 String.make 1 c) ;
