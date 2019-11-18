@@ -34,12 +34,12 @@ let create_connection () =
           Lwt_io.of_fd Lwt_io.Output sock })
 
 let send_msg conn msg =
-  let id = match conn.socket |> Lwt_unix.getsockname with
-    | ADDR_INET (a,p) -> p
-    | ADDR_UNIX _ -> failwith "unreachable" in
-  let parser = parse ((string_of_int id) ^ "|" ^ msg) in
-  write_line conn.out_channel
-    ("[" ^ parser.time ^ "] " ^ parser.user ^ ": " ^ parser.message)
+  (* let id = match conn.socket |> Lwt_unix.getsockname with *)
+  (*   | ADDR_INET (a,p) -> p *)
+  (*   | ADDR_UNIX _ -> failwith "unreachable" in *)
+  (* let parser = parse ((string_of_int id) ^ "|" ^ msg) in *)
+  write_line conn.out_channel msg
+    (* ("[" ^ parser.time ^ "] " ^ parser.user ^ ": " ^ parser.message) *)
 
 
 let rec listen_msg conn t () =
@@ -47,16 +47,16 @@ let rec listen_msg conn t () =
     catch (fun _ -> read_line conn.in_channel)
       (function
         |End_of_file ->
-           Lwt_io.close conn.in_channel;
+           ignore @@ Lwt_io.close conn.in_channel;
            ANSITerminal.(erase Screen);
            ANSITerminal.set_cursor 1 1;
            print_endline "connection lost with server";
-           exit 1
+           exit 1  (* TODO: just raise the error and catch it later *)
         | e -> raise e
       )
   in
-  let id = match conn.socket |> Lwt_unix.getsockname with
-    | ADDR_INET (a,p) -> p
-    | ADDR_UNIX _ -> failwith "unreachable" in
-  t := DoublyLinkedList.insert (parse ((string_of_int id) ^ "|" ^ msg)) !t ;
+  (* let id = match conn.socket |> Lwt_unix.getsockname with *)
+  (*   | ADDR_INET (a,p) -> p *)
+  (*   | ADDR_UNIX _ -> failwith "unreachable" in *)
+  t := DoublyLinkedList.insert (parse msg) !t ;
   listen_msg conn t ()

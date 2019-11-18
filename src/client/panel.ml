@@ -76,14 +76,16 @@ module InputPanel = struct
   open Panel
 
   type t =
-    {base: Panel.t; buffer: Buffer.t; mutable cursor: int; mutable length: int}
+    {base: Panel.t; buffer: Buffer.t; mutable cursor: int; mutable length: int;
+     callback: string -> unit}
 
-  let make x y width height =
+  let make x y width height callback=
     assert (height > 2) ;
     { base= Panel.make x y width height
     ; buffer= Buffer.create width
     ; cursor= 0
-    ; length= 0 }
+    ; length= 0
+    ; callback }
 
   let draw_input t buffer =
     (* TODO: overflow *)
@@ -113,7 +115,7 @@ module InputPanel = struct
       Buffer.truncate buffer i ;
       Buffer.add_string buffer temp
 
-  let update t conn input =
+  let update t input =
     match input with
     | Char c ->
       (* TODO: What do we do if the message length is larger than box width? *)
@@ -140,7 +142,8 @@ module InputPanel = struct
       return ()
     | Enter ->
       let msg = Buffer.contents t.buffer in
-      if msg <> "" then ignore @@ send_msg conn msg ;
+      (* TODO: jank *)
+      t.callback msg;
       Buffer.clear t.buffer ;
       t.cursor <- 0 ;
       t.length <- 0 ;
@@ -175,11 +178,12 @@ module MessagePanel = struct
         for i = 1 to t.base.height - 2 do
           (* TODO: overflow *)
           let value = DoublyLinkedList.get_value !current in
-          String.to_seqi value.message
+          (* TODO: don't use String.to_seqi *)
+          String.to_seqi (format value)
           |> Seq.iter (fun (j, c) ->
-              buffer.(j + 1).(t.base.y + t.base.height - 1 - i) <-
+              buffer.(j + 1 + t.base.x).(t.base.y + t.base.height - 1 - i) <-
                 String.make 1 c) ;
-          ( match DoublyLinkedList.next_opt !current with
+          ( match DoublyLinkedList.prev_opt !current with
             | Some t ->
               current := t
             | None ->
@@ -190,4 +194,16 @@ module MessagePanel = struct
         ()
       | e ->
         log_out @@ "unhandled exception " ^ to_string e
+end
+
+module TextPanel = struct
+  type t = {x: int; y: int; mutable text: string list}
+
+  let make x y text = {x; y; text}
+
+  let set_text t text = t.text <- text
+
+  (* TODO: overflow *)
+  let draw t buffer =
+    List.iteri (fun j c -> buffer.(j + 1 + t.x).(t.y) <- c ) t.text
 end
