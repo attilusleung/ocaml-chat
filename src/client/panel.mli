@@ -33,7 +33,7 @@ end
 (** A message panel that displays messages sent to the client *)
 module MessagePanel : sig
   type t
-  val make: int -> int -> int -> int -> t * Parser.t DoublyLinkedList.t ref
+  val make: int -> int -> int -> int -> t * (string, Parser.t DoublyLinkedList.t) Hashtbl.t
   val draw: t -> string array array -> bool -> unit
 end
 

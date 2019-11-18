@@ -1,2 +1,2 @@
 true:package(oUnit),package(ounit-lwt),package(unix),package(ANSITerminal),package(lwt),package(lwt.unix),package(lwt_ppx),thread
-<src/> or <src/tests> or <src/server> or <src/client> : include
+<src/> or <src/tests> or <src/server> or <src/client> or <src/common>: include

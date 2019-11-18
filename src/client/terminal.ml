@@ -8,6 +8,7 @@ open Lwt
 open Log
 open Parser
 open Client
+open Protocol
 
 let termios = tcgetattr stdin
 
@@ -117,11 +118,14 @@ module MessageState = struct
     log_out "attempt msg init" ;
     let input_callback msg =
       if msg <> "" then
-        ignore (pack (time ()) (get_user ()) msg |> send_msg conn)
+        ignore
+          ( encode_msg (get_selected ()) (time ()) (get_user ()) msg
+            |> send_msg conn )
     in
     log_out "created callback" ;
     let msg_input = InputPanel.make 0 25 80 3 input_callback in
     let msg_show, msg_log = MessagePanel.make 0 0 80 20 in
+    (* TODO *)
     let panels = {msg_input; msg_show} in
     (* TODO: wait and cleanup? *)
     ignore @@ term_update conn panels () ;
@@ -145,7 +149,7 @@ module LoginState = struct
     >>= InputPanel.update panels.name_input
     >>= term_update panels
 
-  let init () =
+  let init conn () =
     log_out "attempt log init" ;
     let promise, resolver = Lwt.wait () in
     let prompt_text =
@@ -245,6 +249,8 @@ module LoginState = struct
     let name_input = InputPanel.make 1 3 80 3 input_callback in
     let panels = {prompt_text; warn_text; name_input} in
     pick [term_update panels (); promise]
+    >>= fun _ -> send_msg conn (encode_login (get_user ())) (* TODO: verify
+                                                               login status *)
 end
 
 let rec get_interrupt () =
@@ -254,7 +260,7 @@ let rec get_interrupt () =
 let start () =
   let%lwt conn = pick [create_connection (); get_interrupt ()] in
   log_out "connected" ;
-  LoginState.init () >>= MessageState.init conn
+  LoginState.init conn () >>= MessageState.init conn
 
 (* >>= fun _ -> *)
 (* log_out "done" ; *)

@@ -24,31 +24,47 @@ let rec while_connect sock server_address =
 
 let create_connection () =
   Lwt_unix.(
-    log_out "try connect";
+    log_out "try connect" ;
     let sock = socket PF_INET SOCK_STREAM 0 in
     let%lwt () = while_connect sock server_address in
     (* ignore @@ bind sock client_address; *)
     return
       { socket= sock
       ; in_channel= Lwt_io.of_fd Lwt_io.Input sock
-      ; out_channel=
-          Lwt_io.of_fd Lwt_io.Output sock })
+      ; out_channel= Lwt_io.of_fd Lwt_io.Output sock })
 
-let send_msg conn msg =
-  write_line conn.out_channel msg
+let send_msg conn msg = write_line conn.out_channel msg
 
-let rec listen_msg conn t () =
-  let%lwt msg =
-    catch (fun _ -> read_line conn.in_channel)
-      (function
-        |End_of_file ->
-           ignore @@ Lwt_io.close conn.in_channel;
-           ANSITerminal.(erase Screen);
-           ANSITerminal.set_cursor 1 1;
-           print_endline "connection lost with server";
-           exit 1  (* TODO: just raise the error and catch it later *)
-        | e -> raise e
-      )
+let send_msg_blocking conn msg =
+  let out_channel =
+    Unix.out_channel_of_descr @@ Lwt_unix.unix_file_descr conn.socket
   in
-  t := DoublyLinkedList.insert (parse msg) !t ;
-  listen_msg conn t ()
+  output_string out_channel msg ; Stdlib.flush out_channel
+
+let rec listen_msg conn logs () =
+  let%lwt msg =
+    catch
+      (fun _ -> read_line conn.in_channel)
+      (function
+        | End_of_file ->
+          ignore @@ Lwt_io.close conn.in_channel ;
+          ANSITerminal.(erase Screen) ;
+          ANSITerminal.set_cursor 1 1 ;
+          print_endline "connection lost with server" ;
+          exit 1 (* TODO: just raise the error and catch it later *)
+        | e ->
+          raise e)
+  in
+  let parsed = parse msg in
+  let user = get_from_user parsed in
+  (* TODO: Doubly linked list dont exist in hashtbl *)
+  let prev_logs =
+    match Hashtbl.find_opt logs user with
+    | Some l ->
+      l
+    | None ->
+      DoublyLinkedList.empty
+  in
+  Hashtbl.replace logs user (DoublyLinkedList.insert parsed prev_logs) ;
+  (* t := DoublyLinkedList.insert (parse msg) !t ; *)
+  listen_msg conn logs ()

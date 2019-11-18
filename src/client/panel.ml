@@ -6,6 +6,7 @@ open Lwt
 open Log
 open Printexc
 open Parser
+open Client
 
 exception PanelWidthTooLarge
 
@@ -76,10 +77,13 @@ module InputPanel = struct
   open Panel
 
   type t =
-    {base: Panel.t; buffer: Buffer.t; mutable cursor: int; mutable length: int;
-     callback: string -> unit}
+    { base: Panel.t
+    ; buffer: Buffer.t
+    ; mutable cursor: int
+    ; mutable length: int
+    ; callback: string -> unit }
 
-  let make x y width height callback=
+  let make x y width height callback =
     assert (height > 2) ;
     { base= Panel.make x y width height
     ; buffer= Buffer.create width
@@ -143,7 +147,7 @@ module InputPanel = struct
     | Enter ->
       let msg = Buffer.contents t.buffer in
       (* TODO: jank *)
-      t.callback msg;
+      t.callback msg ;
       Buffer.clear t.buffer ;
       t.cursor <- 0 ;
       t.length <- 0 ;
@@ -160,19 +164,28 @@ module MessagePanel = struct
   include Panel
 
   type t =
-    { base: Panel.t
-    ; logs: Parser.t DoublyLinkedList.t ref }
+    {base: Panel.t; logs: (string, Parser.t DoublyLinkedList.t) Hashtbl.t}
 
   let make x y width height =
-    let logs = ref DoublyLinkedList.empty in
+    let logs = Hashtbl.create 5 in
+    (* TODO: add logs for default *)
+    Hashtbl.add logs (get_selected ()) DoublyLinkedList.empty ;
     ({base= Panel.make x y width height; logs}, logs)
 
   exception Break
 
   let draw t buffer strong =
     Panel.draw_border t.base buffer strong ;
-    let current = ref !(t.logs) in
-    if DoublyLinkedList.is_empty !(t.logs) then ()
+    let u =
+      match Hashtbl.find_opt t.logs (get_selected ()) with
+      | Some u ->
+        u
+      | None ->
+        Hashtbl.add t.logs (get_selected ()) DoublyLinkedList.empty ;
+        Hashtbl.find t.logs (get_selected ())
+    in
+    let current = ref u in
+    if DoublyLinkedList.is_empty !current then ()
     else
       try
         for i = 1 to t.base.height - 2 do
@@ -183,11 +196,11 @@ module MessagePanel = struct
           |> Seq.iter (fun (j, c) ->
               buffer.(j + 1 + t.base.x).(t.base.y + t.base.height - 1 - i) <-
                 String.make 1 c) ;
-          ( match DoublyLinkedList.prev_opt !current with
-            | Some t ->
-              current := t
-            | None ->
-              raise Break ) ;
+          match DoublyLinkedList.prev_opt !current with
+          | Some t ->
+            current := t
+          | None ->
+            raise Break
         done
       with
       | Break ->
@@ -205,5 +218,5 @@ module TextPanel = struct
 
   (* TODO: overflow *)
   let draw t buffer =
-    List.iteri (fun j c -> buffer.(j + 1 + t.x).(t.y) <- c ) t.text
+    List.iteri (fun j c -> buffer.(j + 1 + t.x).(t.y) <- c) t.text
 end
