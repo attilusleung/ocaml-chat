@@ -2,6 +2,7 @@ open Lwt
 open Lwt_io
 open Log
 open Parser
+open Unix
 
 let client_address = Unix.(ADDR_INET (inet_addr_loopback, 9001))
 
@@ -34,13 +35,7 @@ let create_connection () =
           Lwt_io.of_fd Lwt_io.Output sock })
 
 let send_msg conn msg =
-  (* let id = match conn.socket |> Lwt_unix.getsockname with *)
-  (*   | ADDR_INET (a,p) -> p *)
-  (*   | ADDR_UNIX _ -> failwith "unreachable" in *)
-  (* let parser = parse ((string_of_int id) ^ "|" ^ msg) in *)
   write_line conn.out_channel msg
-    (* ("[" ^ parser.time ^ "] " ^ parser.user ^ ": " ^ parser.message) *)
-
 
 let rec listen_msg conn t () =
   let%lwt msg =
@@ -55,8 +50,5 @@ let rec listen_msg conn t () =
         | e -> raise e
       )
   in
-  (* let id = match conn.socket |> Lwt_unix.getsockname with *)
-  (*   | ADDR_INET (a,p) -> p *)
-  (*   | ADDR_UNIX _ -> failwith "unreachable" in *)
   t := DoublyLinkedList.insert (parse msg) !t ;
   listen_msg conn t ()

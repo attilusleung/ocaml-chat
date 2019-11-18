@@ -1,4 +1,5 @@
 open Unix
+open Log
 
 type t = {time: float; user: string; message: string}
 
