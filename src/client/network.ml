@@ -66,8 +66,5 @@ let rec listen_msg conn t () =
         | e -> raise e
       )
   in
-  let id = match conn.socket |> Lwt_unix.getsockname with
-    | ADDR_INET (a,p) -> p
-    | ADDR_UNIX _ -> failwith "unreachable" in
   t := DoublyLinkedList.insert (parse msg) !t ;
   listen_msg conn t ()

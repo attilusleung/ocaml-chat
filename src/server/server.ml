@@ -1,5 +1,6 @@
 open Lwt
 open Lwt_io
+open ChatLog
 open Printexc
 open Parser
 
@@ -34,6 +35,7 @@ let rec handle_connection ic oc id () =
   match line with
   | Some msg -> 
     let p = parse msg in
+    log_out (p_to_string p);
     Lwt_io.write_line stdout @@ 
     ("received: \"" ^ p.message ^ "\" from " ^ p.user)
     >>= fun () ->
@@ -42,6 +44,12 @@ let rec handle_connection ic oc id () =
   | None ->
     Lwt_io.write_line stdout @@ "connection " ^ id ^ " terminated"
     >>= fun () -> fail ClosedConnection
+
+let rec write_n oc n = 
+  if n > 0 
+  then Lwt_io.write_line oc (retrieve_log ())
+    >>= fun () -> write_n oc (n-1) 
+  else return ()
 
 let accept_connection active conn =
   let fd, sa = conn in
@@ -57,6 +65,8 @@ let accept_connection active conn =
   let connection_rec =
     {file= fd; in_channel= ic; out_channel= oc; sockadd= sa}
   in
+  write_n oc 20
+  >>= fun () ->
   Hashtbl.add active id connection_rec ;
   Lwt.on_failure (handle_connection ic oc id ()) (fun e ->
       ( match e with
