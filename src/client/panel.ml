@@ -6,6 +6,7 @@ open Lwt
 open Log
 open Printexc
 open Parser
+open Client
 
 exception PanelWidthTooLarge
 
@@ -76,14 +77,19 @@ module InputPanel = struct
   open Panel
 
   type t =
-    {base: Panel.t; buffer: Buffer.t; mutable cursor: int; mutable length: int}
+    { base: Panel.t
+    ; buffer: Buffer.t
+    ; mutable cursor: int
+    ; mutable length: int
+    ; callback: string -> unit }
 
-  let make x y width height =
+  let make x y width height callback =
     assert (height > 2) ;
     { base= Panel.make x y width height
     ; buffer= Buffer.create width
     ; cursor= 0
-    ; length= 0 }
+    ; length= 0
+    ; callback }
 
   let draw_input t buffer =
     (* TODO: overflow *)
@@ -113,7 +119,7 @@ module InputPanel = struct
       Buffer.truncate buffer i ;
       Buffer.add_string buffer temp
 
-  let update t conn input =
+  let update t input =
     match input with
     | Char c ->
       (* TODO: What do we do if the message length is larger than box width? *)
@@ -140,54 +146,144 @@ module InputPanel = struct
       return ()
     | Enter ->
       let msg = Buffer.contents t.buffer in
-      if msg <> "" then ignore @@ send_msg conn msg ;
+      (* TODO: jank *)
+      t.callback msg ;
       Buffer.clear t.buffer ;
       t.cursor <- 0 ;
       t.length <- 0 ;
       return ()
     | Up | Down | Null | Escape ->
       return ()
-    | VimLeft | VimRight | VimUp | VimDown ->
+    | CtrlL | CtrlI | CtrlS ->
       return ()
 
-  (* | _ -> () *)
 end
 
 module MessagePanel = struct
   include Panel
 
   type t =
-    { base: Panel.t
-    ; logs: Parser.t DoublyLinkedList.t ref }
+    {base: Panel.t; logs: (string, Parser.t DoublyLinkedList.t) Hashtbl.t}
 
   let make x y width height =
-    let logs = ref DoublyLinkedList.empty in
+    let logs = Hashtbl.create 5 in
+    (* TODO: add logs for default *)
+    Hashtbl.add logs (get_selected ()) DoublyLinkedList.empty ;
     ({base= Panel.make x y width height; logs}, logs)
 
   exception Break
 
   let draw t buffer strong =
     Panel.draw_border t.base buffer strong ;
-    let current = ref !(t.logs) in
-    if DoublyLinkedList.is_empty !(t.logs) then ()
+    let u =
+      match Hashtbl.find_opt t.logs (get_selected ()) with
+      | Some u ->
+        u
+      | None ->
+        Hashtbl.add t.logs (get_selected ()) DoublyLinkedList.empty ;
+        Hashtbl.find t.logs (get_selected ())
+    in
+    let current = ref u in
+    if DoublyLinkedList.is_empty !current then ()
     else
       try
         for i = 1 to t.base.height - 2 do
           (* TODO: overflow *)
           let p = DoublyLinkedList.get_value !current in
+          (* TODO: don't use String.to_seqi *)
           String.to_seqi (format p)
           |> Seq.iter (fun (j, c) ->
-              buffer.(j + 1).(t.base.y + t.base.height - 1 - i) <-
+              buffer.(j + 1 + t.base.x).(t.base.y + t.base.height - i - 1) <-
                 String.make 1 c) ;
-          ( match DoublyLinkedList.next_opt !current with
-            | Some t ->
-              current := t
-            | None ->
-              raise Break ) ;
+          match DoublyLinkedList.prev_opt !current with
+          | Some t ->
+            current := t
+          | None ->
+            raise Break
         done
-      with
-      | Break ->
-        ()
-      | e ->
-        log_out @@ "unhandled exception " ^ to_string e
+      with Break -> ()
+
+  (* | e -> *)
+  (*   log_out @@ "unhandled exception " ^ to_string e *)
+
+  (*
+     let update t key =
+       match key with
+       | Char j -> (
+           match t.scroll with
+           | None ->
+             ()
+           | Some scroll -> (
+               match DoublyLinkedList.next_opt (snd scroll) with
+               | None ->
+                 ()
+               | Some s ->
+                 t.scroll <- Some (get_selected (), s) ) )
+  *)
+end
+
+module TextPanel = struct
+  type t = {x: int; y: int; mutable text: string list}
+
+  let make x y text = {x; y; text}
+
+  let set_text t text = t.text <- text
+
+  (* TODO: overflow *)
+  let draw t buffer =
+    List.iteri (fun j c -> buffer.(j + 1 + t.x).(t.y) <- c) t.text
+end
+
+module StatusPanel = struct
+  include Panel
+
+  exception Break
+
+  type t = {base: Panel.t; users: string list ref; mutable selected: int}
+
+  (* TODO: better data structure *)
+
+  let make x y width height =
+    let pointer = ref ["yeet"; "hmm"] in
+    {base= Panel.make x y width height; users= pointer; selected= 1}, pointer
+
+  let update_passive t lst = t.users := lst
+
+  let draw t buffer active =
+    Panel.draw_border t.base buffer active ;
+    let p = ref !(t.users) in
+    try
+      for j = t.base.y + 1 to t.base.y + t.base.height - 2 do
+        match !p with
+        | hd :: tl ->
+          String.to_seqi hd
+          |> Seq.iter (fun (i, c) ->
+              buffer.(i + t.base.x + 1).(j) <- String.make 1 c) ;
+          if hd = get_selected () then (
+            buffer.(t.base.x + 1).(j) <-
+              "\x1b[7m" ^ buffer.(t.base.x + 1).(j) ;
+            buffer.(t.base.x + t.base.width - 1).(j) <-
+              "\x1b[0m" ^ buffer.(t.base.x + t.base.width - 1).(j) ) ;
+          p := tl
+        | [] ->
+          raise Break
+      done
+    with Break -> ()
+
+  let get_cursor t = (t.base.x + 2, t.base.y + t.selected + 2)
+
+  let update_active t k =
+    let len = List.length !(t.users) in
+    if t.selected < 0 then t.selected <- 0
+    else if t.selected >= len then t.selected <- len - 1 ;
+    match k with
+    | Up | Char 'k' ->
+      if t.selected > 0 then t.selected <- t.selected - 1 ;
+      return ()
+    | Down | Char 'j' ->
+      if t.selected < len - 1 then t.selected <- t.selected + 1 ;
+      return ()
+    | Enter | Char 'o' -> select_user (List.nth !(t.users) t.selected); return ()
+    | _ ->
+      return ()
 end

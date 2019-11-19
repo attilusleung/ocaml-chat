@@ -3,6 +3,8 @@ open Lwt_io
 open Log
 open Parser
 open Unix
+open Protocol
+open Client
 
 let client_address = Unix.(ADDR_INET (inet_addr_loopback, 9001))
 
@@ -24,38 +26,36 @@ let rec while_connect sock server_address =
 
 let create_connection () =
   Lwt_unix.(
-    log_out "try connect";
+    log_out "try connect" ;
     let sock = socket PF_INET SOCK_STREAM 0 in
     let%lwt () = while_connect sock server_address in
     (* ignore @@ bind sock client_address; *)
     return
       { socket= sock
       ; in_channel= Lwt_io.of_fd Lwt_io.Input sock
-      ; out_channel=
-          Lwt_io.of_fd Lwt_io.Output sock })
+      ; out_channel= Lwt_io.of_fd Lwt_io.Output sock })
 
-let send_msg conn msg =
-  let id = match conn.socket |> Lwt_unix.getsockname with
-    | ADDR_INET (a,p) -> p
-    | ADDR_UNIX _ -> failwith "unreachable" in
-  write_line conn.out_channel (combine (string_of_int id) msg)
+let send_msg conn msg = write_line conn.out_channel msg
 
-let rec listen_msg conn t () =
+let send_msg_blocking conn msg =
+  let out_channel =
+    Unix.out_channel_of_descr @@ Lwt_unix.unix_file_descr conn.socket
+  in
+  output_string out_channel msg ; Stdlib.flush out_channel
+
+let rec listen_msg conn logs users () =
   let%lwt msg =
-    catch (fun _ -> read_line conn.in_channel)
+    catch
+      (fun _ -> read_line conn.in_channel)
       (function
         | End_of_file ->
-          Lwt_io.close conn.in_channel 
-          >>= fun () ->
-          ANSITerminal.(erase Screen);
-          ANSITerminal.set_cursor 1 1;
-          print_endline "connection lost with server";
-          exit 1
-        | e -> raise e
-      )
+          ignore @@ Lwt_io.close conn.in_channel ;
+          ANSITerminal.(erase Screen) ;
+          ANSITerminal.set_cursor 1 1 ;
+          print_endline "connection lost with server" ;
+          exit 1 (* TODO: just raise the error and catch it later *)
+        | e ->
+          raise e)
   in
-  t := begin 
-    try DoublyLinkedList.insert (parse msg) !t 
-    with _ -> !t 
-  end;
-  listen_msg conn t ()
+  handle_msg logs users msg;
+  listen_msg conn logs users ()

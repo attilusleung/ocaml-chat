@@ -1,3 +1,7 @@
+(** A module for the shared data type key.
+    Separated to prevent recursive includes *)
+
+(** A type for key presses on a terminal *)
 type key =
   | Char of char
   | Up
@@ -6,10 +10,9 @@ type key =
   | Right
   | Delete
   | Backspace
-  | VimUp
-  | VimDown
-  | VimLeft
-  | VimRight
   | Enter
-  | Escape (* of char list *)  (* TODO: Don't eat characters *)
+  | CtrlL
+  | CtrlI
+  | CtrlS
+  | Escape
   | Null
