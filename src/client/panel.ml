@@ -154,10 +154,9 @@ module InputPanel = struct
       return ()
     | Up | Down | Null | Escape ->
       return ()
-    | VimLeft | VimRight | VimUp | VimDown ->
+    | CtrlL | CtrlI | CtrlS ->
       return ()
 
-  (* | _ -> () *)
 end
 
 module MessagePanel = struct
@@ -194,7 +193,7 @@ module MessagePanel = struct
           (* TODO: don't use String.to_seqi *)
           String.to_seqi (format p)
           |> Seq.iter (fun (j, c) ->
-              buffer.(j + 1 + t.base.x).(t.base.y + t.base.height - 1 - i) <-
+              buffer.(j + 1 + t.base.x).(t.base.y + t.base.height - i - 1) <-
                 String.make 1 c) ;
           match DoublyLinkedList.prev_opt !current with
           | Some t ->
@@ -202,11 +201,25 @@ module MessagePanel = struct
           | None ->
             raise Break
         done
-      with
-      | Break ->
-        ()
-      | e ->
-        log_out @@ "unhandled exception " ^ to_string e
+      with Break -> ()
+
+  (* | e -> *)
+  (*   log_out @@ "unhandled exception " ^ to_string e *)
+
+  (*
+     let update t key =
+       match key with
+       | Char j -> (
+           match t.scroll with
+           | None ->
+             ()
+           | Some scroll -> (
+               match DoublyLinkedList.next_opt (snd scroll) with
+               | None ->
+                 ()
+               | Some s ->
+                 t.scroll <- Some (get_selected (), s) ) )
+  *)
 end
 
 module TextPanel = struct
@@ -219,4 +232,58 @@ module TextPanel = struct
   (* TODO: overflow *)
   let draw t buffer =
     List.iteri (fun j c -> buffer.(j + 1 + t.x).(t.y) <- c) t.text
+end
+
+module StatusPanel = struct
+  include Panel
+
+  exception Break
+
+  type t = {base: Panel.t; users: string list ref; mutable selected: int}
+
+  (* TODO: better data structure *)
+
+  let make x y width height =
+    let pointer = ref ["yeet"; "hmm"] in
+    {base= Panel.make x y width height; users= pointer; selected= 1}, pointer
+
+  let update_passive t lst = t.users := lst
+
+  let draw t buffer active =
+    Panel.draw_border t.base buffer active ;
+    let p = ref !(t.users) in
+    try
+      for j = t.base.y + 1 to t.base.y + t.base.height - 2 do
+        match !p with
+        | hd :: tl ->
+          String.to_seqi hd
+          |> Seq.iter (fun (i, c) ->
+              buffer.(i + t.base.x + 1).(j) <- String.make 1 c) ;
+          if hd = get_selected () then (
+            buffer.(t.base.x + 1).(j) <-
+              "\x1b[7m" ^ buffer.(t.base.x + 1).(j) ;
+            buffer.(t.base.x + t.base.width - 1).(j) <-
+              "\x1b[0m" ^ buffer.(t.base.x + t.base.width - 1).(j) ) ;
+          p := tl
+        | [] ->
+          raise Break
+      done
+    with Break -> ()
+
+  let get_cursor t = (t.base.x + 2, t.base.y + t.selected + 2)
+
+  let update_active t k =
+    let len = List.length !(t.users) in
+    if t.selected < 0 then t.selected <- 0
+    else if t.selected >= len then t.selected <- len - 1 ;
+    match k with
+    | Up | Char 'k' ->
+      if t.selected > 0 then t.selected <- t.selected - 1 ;
+      return ()
+    | Down | Char 'j' ->
+      if t.selected < len - 1 then t.selected <- t.selected + 1 ;
+      return ()
+    | Enter | Char 'o' -> select_user (List.nth !(t.users) t.selected); return ()
+    | _ ->
+      return ()
 end

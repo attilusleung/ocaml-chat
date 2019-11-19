@@ -74,65 +74,118 @@ let parse_input c =
       return @@ Char c
     | '\x7f' ->
       return Backspace
-    | '\x08' ->
-      return VimLeft
-    | '\x0a' ->
-      return VimDown
-    | '\x0b' ->
-      return VimUp
-    | '\x0c' ->
-      return VimRight
     | '\x0d' ->
       return Enter
     | '\x03' ->
       (* Ctrl- C *)
-      erase Screen ; set_cursor 1 1 ; exit 0
+      erase Screen ;
+      set_cursor 1 1 ;
+      output_string Stdlib.stdout "\x1b[?25h" ;
+      (* Shows cursor *)
+      exit 0
+    | '\x0c' ->
+      return CtrlL
+    | '\x09' ->
+      return CtrlI
+    | '\x13' ->
+      return CtrlS
     | _ ->
       return Null
   with End_of_file -> return Null
 
 let input () = get_char_stdin () >>= parse_input
 
-type login_panel_rec =
-  {prompt_text: TextPanel.t; warn_text: TextPanel.t; name_input: InputPanel.t}
-
-type msg_panel_rec = {msg_show: MessagePanel.t; msg_input: InputPanel.t}
-
 module MessageState = struct
+  type msg_panel_rec =
+    { msg_show: MessagePanel.t
+    ; msg_input: InputPanel.t
+    ; msg_status: StatusPanel.t }
+
+  type panel_switch = MsgShow | MsgInput | MsgStatus
+
+  let active = ref MsgInput
+
   let rec draw panels =
     let s = size () in
     let b = make_matrix (fst s) (snd s) " " in
-    InputPanel.draw panels.msg_input b false ;
-    MessagePanel.draw panels.msg_show b false ;
+    InputPanel.draw panels.msg_input b (!active = MsgInput) ;
+    MessagePanel.draw panels.msg_show b (!active = MsgShow) ;
+    StatusPanel.draw panels.msg_status b (!active = MsgStatus) ;
     set_cursor 1 1 ;
     flush_screen b s ;
-    let cursorx, cursory = InputPanel.get_cursor panels.msg_input in
-    set_cursor cursorx cursory ; return ()
+    ( match !active with
+      | MsgInput ->
+        output_string Stdlib.stdout "\x1b[?25h" (* Shows cursor *) ;
+        let cursorx, cursory = InputPanel.get_cursor panels.msg_input in
+        set_cursor cursorx cursory
+      | MsgShow ->
+        output_string Stdlib.stdout "\x1b[?25l" (* Hides cursor *)
+      | MsgStatus ->
+        let cursorx, cursory = StatusPanel.get_cursor panels.msg_status in
+        set_cursor cursorx cursory ) ;
+    return ()
+
+  let switch_active key =
+    match key with
+    | CtrlI ->
+      active := MsgInput ;
+      return Null
+    | CtrlL ->
+      active := MsgShow ;
+      return Null
+    | CtrlS ->
+      active := MsgStatus ;
+      return Null
+    | k ->
+      return k
+
+  let update_active panels key =
+    match !active with
+    | MsgShow ->
+      return ()
+    | MsgInput ->
+      InputPanel.update panels.msg_input key
+    | MsgStatus ->
+      StatusPanel.update_active panels.msg_status key
 
   let rec term_update conn panels () =
-    draw panels >>= input
-    >>= InputPanel.update panels.msg_input
+    draw panels >>= input >>= switch_active
+    (* >>= InputPanel.update panels.msg_input *)
+    >>= update_active panels
     >>= term_update conn panels
 
   let init conn () =
     log_out "attempt msg init" ;
+    let msg_show, msg_log = MessagePanel.make 30 0 80 20 in
     let input_callback msg =
-      if msg <> "" then
-        ignore
-          ( encode_msg (get_selected ()) (time ()) (get_user ()) msg
-            |> send_msg conn )
+      if msg <> "" then (
+        let parsed =
+          Parser.make (get_selected ()) (time ()) (get_user ()) msg
+        in
+        let prev_logs =
+          match Hashtbl.find_opt msg_log (get_selected ()) with
+          | Some l ->
+            l
+          | None ->
+            DoublyLinkedList.empty
+        in
+        Hashtbl.replace msg_log (get_selected ()) (DoublyLinkedList.insert parsed prev_logs) ;
+        ignore (encode_parsed_msg parsed |> send_msg conn) )
     in
     log_out "created callback" ;
-    let msg_input = InputPanel.make 0 25 80 3 input_callback in
-    let msg_show, msg_log = MessagePanel.make 0 0 80 20 in
+    let msg_input = InputPanel.make 30 25 80 3 input_callback in
+    let msg_status, msg_user = StatusPanel.make 0 0 25 23 in
     (* TODO *)
-    let panels = {msg_input; msg_show} in
+    let panels = {msg_input; msg_show; msg_status} in
     (* TODO: wait and cleanup? *)
     ignore @@ term_update conn panels () ;
-    listen_msg conn msg_log ()
+    listen_msg conn msg_log msg_user ()
 end
 
 module LoginState = struct
+  type login_panel_rec =
+    {prompt_text: TextPanel.t; warn_text: TextPanel.t; name_input: InputPanel.t}
+
   let rec draw panels =
     let s = size () in
     let b = make_matrix (fst s) (snd s) " " in
@@ -244,13 +297,13 @@ module LoginState = struct
           ; "t"
           ; "y\u{001b}[0m" ]
       else (login_user name ; wakeup_later resolver ())
+      (* TODO: verify login status *)
     in
     log_out "created callback" ;
     let name_input = InputPanel.make 1 3 80 3 input_callback in
     let panels = {prompt_text; warn_text; name_input} in
     pick [term_update panels (); promise]
-    >>= fun _ -> send_msg conn (encode_login (get_user ())) (* TODO: verify
-                                                               login status *)
+    >>= fun _ -> send_msg conn (encode_login (get_user ()))
 end
 
 let rec get_interrupt () =
@@ -261,9 +314,6 @@ let start () =
   let%lwt conn = pick [create_connection (); get_interrupt ()] in
   log_out "connected" ;
   LoginState.init conn () >>= MessageState.init conn
-
-(* >>= fun _ -> *)
-(* log_out "done" ; *)
 
 let () =
   setraw () ;

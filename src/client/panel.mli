@@ -43,3 +43,11 @@ module TextPanel : sig
   val set_text : t -> string list -> unit
   val draw: t -> string array array -> unit
 end
+
+module StatusPanel : sig
+  type t
+  val make: int -> int -> int -> int -> t * string list ref
+  val draw: t -> string array array -> bool -> unit
+  val get_cursor : t -> int * int
+  val update_active : t -> Key.key -> unit Lwt.t
+end

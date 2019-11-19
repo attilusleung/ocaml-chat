@@ -10,10 +10,9 @@ type key =
   | Right
   | Delete
   | Backspace
-  | VimUp
-  | VimDown
-  | VimLeft
-  | VimRight
   | Enter
+  | CtrlL
+  | CtrlI
+  | CtrlS
   | Escape
   | Null

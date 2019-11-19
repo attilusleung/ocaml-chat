@@ -24,7 +24,8 @@ let active = Hashtbl.create 5
 let bounce msg parsed =
   return
     ( get_to_user parsed |> Hashtbl.find_all active
-      |> List.iter (fun c -> ignore @@ Lwt_io.write_line c.out_channel msg) )
+      |> List.iter (fun c ->
+          ignore @@ Lwt_io.write_line c.out_channel ("M" ^ msg)) )
 
 (* https://baturin.org/code/lwt-counter-server/ *)
 let rec handle_connection ic oc id () =
@@ -33,27 +34,30 @@ let rec handle_connection ic oc id () =
   | Some msg ->
     Lwt_io.write_line stdout @@ msg
     (* "received: \"" ^ msg ^ "\" from " ^ id *)
-    >>= (fun _ -> match decode msg with Message m -> bounce msg m | _ -> return () )
+    >>= (fun _ ->
+        match decode msg with Message m -> bounce msg m | _ -> return ())
     >>= handle_connection ic oc id
   | None ->
-    Lwt_io.write_line stdout @@ "connection " ^ id ^ " terminated"
+    Lwt_io.write_line stdout @@ "Connection " ^ id ^ " terminated"
     >>= fun () -> fail ClosedConnection
 
-let login_connection ic oc id connection_rec =
+let login_connection ic oc id connection_rec () =
   let%lwt line = read_line_opt ic in
   match line with
   | Some msg -> (
       match decode msg with
       | Login s ->
         Lwt_io.write_line stdout @@ id ^ " logged in as " ^ s
-        >>= fun _ -> return @@ Hashtbl.add active s connection_rec
+        >>= fun _ ->
+        Hashtbl.add active s connection_rec ;
+        return s
       | _ ->
         Lwt_unix.close connection_rec.file
         >>= fun _ ->
         Lwt_io.write_line stdout @@ id ^ " sent invalid login message " ^ msg
         >>= fun _ -> fail ClosedConnection )
   | None ->
-    Lwt_io.write_line stdout @@ "connection " ^ id ^ " terminated"
+    Lwt_io.write_line stdout @@ "Connection with" ^ id ^ " terminated"
     >>= fun () -> fail ClosedConnection
 
 let accept_connection conn =
@@ -71,15 +75,24 @@ let accept_connection conn =
     {file= fd; in_channel= ic; out_channel= oc; sockadd= sa}
   in
   Hashtbl.add active id connection_rec ;
-  Lwt.on_failure
-    (login_connection ic oc id connection_rec >>= handle_connection ic oc id)
+  ignore
+  @@ Lwt.try_bind
+    (login_connection ic oc id connection_rec)
+    (fun user ->
+       Lwt.catch (handle_connection ic oc id) (fun e ->
+           ( match e with
+             | ClosedConnection ->
+               print_endline @@ "Connection with " ^ user ^ " (" ^ id
+                                ^ ") closed"
+             | e ->
+               print_endline @@ "An error occured :" ^ to_string e ) ;
+           return @@ Hashtbl.remove active user))
     (fun e ->
-       ( match e with
-         | ClosedConnection ->
-           print_endline @@ "Connection with " ^ id ^ " closed"
-         | e ->
-           print_endline @@ "An error occured :" ^ to_string e ) ;
-       Hashtbl.remove active id) ;
+       match e with
+       | ClosedConnection ->
+         return ()
+       | e ->
+         return (print_endline @@ "An error occured: " ^ to_string e)) ;
   let%lwt () = Lwt_io.write_line stdout @@ "new connection from " ^ id in
   return ()
 
@@ -118,4 +131,5 @@ let () =
   print_endline @@ "Server started at "
                    ^ Unix.string_of_inet_addr listen_address
                    ^ ":" ^ string_of_int port ;
-  Lwt_main.run @@ serve ()
+  Lwt_main.run
+  @@ (serve () >>= fun _ -> Lwt_io.write_line Lwt_io.stdout "ended")

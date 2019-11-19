@@ -28,6 +28,8 @@ let rec parse_help slist =
 
 let parse s = parse_help (String.split_on_char '|' s)
 
+let make to_user time from_user message = {to_user; time; from_user; message}
+
 let pack to_user time from_user message =
   to_user ^ "|" ^ string_of_float time ^ "|" ^ from_user ^ "|" ^ message
 

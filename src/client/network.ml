@@ -3,6 +3,8 @@ open Lwt_io
 open Log
 open Parser
 open Unix
+open Protocol
+open Client
 
 let client_address = Unix.(ADDR_INET (inet_addr_loopback, 9001))
 
@@ -41,7 +43,7 @@ let send_msg_blocking conn msg =
   in
   output_string out_channel msg ; Stdlib.flush out_channel
 
-let rec listen_msg conn logs () =
+let rec listen_msg conn logs users () =
   let%lwt msg =
     catch
       (fun _ -> read_line conn.in_channel)
@@ -55,16 +57,20 @@ let rec listen_msg conn logs () =
         | e ->
           raise e)
   in
-  let parsed = parse msg in
-  let user = get_from_user parsed in
-  (* TODO: Doubly linked list dont exist in hashtbl *)
-  let prev_logs =
-    match Hashtbl.find_opt logs user with
-    | Some l ->
-      l
-    | None ->
-      DoublyLinkedList.empty
-  in
-  Hashtbl.replace logs user (DoublyLinkedList.insert parsed prev_logs) ;
-  (* t := DoublyLinkedList.insert (parse msg) !t ; *)
-  listen_msg conn logs ()
+  handle_msg logs users msg;
+  (*
+     match decode_msg msg with
+     | Message p ->
+     let parsed = parse msg in
+     let user = get_from_user parsed in
+     let prev_logs =
+       match Hashtbl.find_opt logs user with
+       | Some l ->
+         l
+       | None ->
+         DoublyLinkedList.empty
+     in
+     Hashtbl.replace logs user (DoublyLinkedList.insert parsed prev_logs) ;
+     (* t := DoublyLinkedList.insert (parse msg) !t ; *)
+  *)
+  listen_msg conn logs users ()
