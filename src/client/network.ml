@@ -34,21 +34,19 @@ let create_connection () =
       ; out_channel=
           Lwt_io.of_fd Lwt_io.Output sock })
 
-
 let send_msg conn msg =
   let id = match conn.socket |> Lwt_unix.getsockname with
     | ADDR_INET (a,p) -> p
     | ADDR_UNIX _ -> failwith "unreachable" in
-  let s = (() |> get_time |> parse_time |> string_of_int) ^ 
-          "|" ^ (string_of_int id) ^ "|" ^ msg in
-  write_line conn.out_channel s
+  write_line conn.out_channel (combine (string_of_int id) msg)
 
 let rec listen_msg conn t () =
   let%lwt msg =
     catch (fun _ -> read_line conn.in_channel)
       (function
-        |End_of_file ->
-          Lwt_io.close conn.in_channel;
+        | End_of_file ->
+          Lwt_io.close conn.in_channel 
+          >>= fun () ->
           ANSITerminal.(erase Screen);
           ANSITerminal.set_cursor 1 1;
           print_endline "connection lost with server";

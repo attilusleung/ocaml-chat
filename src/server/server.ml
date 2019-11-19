@@ -53,7 +53,6 @@ let write_log oc n =
     | [] -> return () in
   write logs
 
-
 let accept_connection active conn =
   let fd, sa = conn in
   let ic = Lwt_io.of_fd Lwt_io.Input fd in
