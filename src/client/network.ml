@@ -54,5 +54,8 @@ let rec listen_msg conn t () =
         | e -> raise e
       )
   in
-  t := DoublyLinkedList.insert (parse msg) !t ;
+  t := begin 
+    try DoublyLinkedList.insert (parse msg) !t 
+    with _ -> !t 
+  end;
   listen_msg conn t ()
