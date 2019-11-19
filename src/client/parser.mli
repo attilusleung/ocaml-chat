@@ -1,5 +1,9 @@
 
-type t = {time : string; user : string; message : string}
+type t = {time : int; user : string; message : string}
+
+val get_time : unit -> Unix.tm
+
+val parse_time : Unix.tm -> int
 
 val parse : string -> t
 

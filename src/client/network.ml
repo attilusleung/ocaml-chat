@@ -34,23 +34,13 @@ let create_connection () =
       ; out_channel=
           Lwt_io.of_fd Lwt_io.Output sock })
 
-let get_time () = 
-  let tm = () |> time |> localtime in
-  let hour = 
-    if tm.tm_hour < 10 
-    then "0" ^ (tm.tm_hour |> string_of_int) 
-    else (tm.tm_hour |> string_of_int) in
-  let minute = 
-    if tm.tm_min < 10 
-    then "0" ^ (tm.tm_min |> string_of_int) 
-    else (tm.tm_min |> string_of_int) in
-  hour ^ ":" ^ minute
 
 let send_msg conn msg =
   let id = match conn.socket |> Lwt_unix.getsockname with
     | ADDR_INET (a,p) -> p
     | ADDR_UNIX _ -> failwith "unreachable" in
-  let s = (get_time ()) ^ "|" ^ (string_of_int id) ^ "|" ^ msg in
+  let s = (() |> get_time |> parse_time |> string_of_int) ^ 
+          "|" ^ (string_of_int id) ^ "|" ^ msg in
   write_line conn.out_channel s
 
 let rec listen_msg conn t () =
