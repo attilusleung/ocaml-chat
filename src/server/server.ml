@@ -3,6 +3,7 @@ open Lwt_io
 open Printexc
 open Parser
 open Protocol
+open ChatLog
 
 exception ClosedConnection
 
@@ -35,11 +36,21 @@ let rec handle_connection ic oc id () =
     Lwt_io.write_line stdout @@ msg
     (* "received: \"" ^ msg ^ "\" from " ^ id *)
     >>= (fun _ ->
-        match decode msg with Message m -> bounce msg m | _ -> return ())
+        match decode msg with
+        | Message m -> log_out msg; bounce msg m
+        | _ -> return ())
     >>= handle_connection ic oc id
   | None ->
     Lwt_io.write_line stdout @@ "Connection " ^ id ^ " terminated"
     >>= fun () -> fail ClosedConnection
+
+let write_log oc n () =
+  let logs = retrieve_chatlog n in
+  let rec write lst =
+    match lst with
+    | h::t -> Lwt_io.write_line oc h >>= fun () -> write t
+    | [] -> return () in
+  write logs
 
 let login_connection ic oc id connection_rec () =
   let%lwt line = read_line_opt ic in
@@ -49,8 +60,8 @@ let login_connection ic oc id connection_rec () =
       | Login s ->
         Lwt_io.write_line stdout @@ id ^ " logged in as " ^ s
         >>= fun _ ->
-        Hashtbl.add active s connection_rec ;
-        return s
+        return @@ Hashtbl.add active s connection_rec
+        >>= write_log oc 20 >>= fun _ -> return s (* TODO: Move this *)
       | _ ->
         Lwt_unix.close connection_rec.file
         >>= fun _ ->

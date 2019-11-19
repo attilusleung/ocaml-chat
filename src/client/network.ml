@@ -58,19 +58,4 @@ let rec listen_msg conn logs users () =
           raise e)
   in
   handle_msg logs users msg;
-  (*
-     match decode_msg msg with
-     | Message p ->
-     let parsed = parse msg in
-     let user = get_from_user parsed in
-     let prev_logs =
-       match Hashtbl.find_opt logs user with
-       | Some l ->
-         l
-       | None ->
-         DoublyLinkedList.empty
-     in
-     Hashtbl.replace logs user (DoublyLinkedList.insert parsed prev_logs) ;
-     (* t := DoublyLinkedList.insert (parse msg) !t ; *)
-  *)
   listen_msg conn logs users ()

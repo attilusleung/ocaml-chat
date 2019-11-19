@@ -1,4 +1,4 @@
-MODULES=src/client/doublyLinkedList src/client/terminal src/client/panel src/client/key src/client/network src/server/server src/client/log src/client/client src/common/parser src/common/protocol
+MODULES=src/client/doublyLinkedList src/client/terminal src/client/panel src/client/key src/client/network src/server/server src/client/log src/client/client src/common/parser src/common/protocol src/server/chatlog
 CLIENTLOC=src/client/
 CLIENT=terminal.native
 SERVELOC=src/server/
