@@ -17,6 +17,9 @@ build:
 term:
 	$(OCAMLBUILD) $(CLIENTLOC)$(CLIENT) && ./$(CLIENT)
 
+remote:
+	$(OCAMLBUILD) $(CLIENTLOC)$(CLIENT) && ./$(CLIENT) -a remote
+
 serve:
 	$(OCAMLBUILD) $(SERVELOC)$(SERVE) && ./$(SERVE)
 
