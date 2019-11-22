@@ -8,7 +8,7 @@ open Client
 
 let client_address = Unix.(ADDR_INET (inet_addr_loopback, 9001))
 
-let server_address = Unix.(ADDR_INET (inet_addr_loopback, 9000))
+let server_address = Unix.(ADDR_INET (inet_addr_of_string "142.93.193.196", 9000))
 
 let port = 9000
 
