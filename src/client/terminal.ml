@@ -160,7 +160,7 @@ module MessageState = struct
     let input_callback msg =
       if msg <> "" then (
         let parsed =
-          Parser.make (get_selected ()) (time ()) (get_user ()) msg
+          Parser.pack (get_selected ()) (time ()) (get_user ()) msg
         in
         let prev_logs =
           match Hashtbl.find_opt msg_log (get_selected ()) with
@@ -169,8 +169,8 @@ module MessageState = struct
           | None ->
             DoublyLinkedList.empty
         in
-        Hashtbl.replace msg_log (get_selected ()) (DoublyLinkedList.insert parsed prev_logs) ;
-        ignore (encode_parsed_msg parsed |> send_msg conn) )
+        Hashtbl.replace msg_log (get_selected ()) (DoublyLinkedList.insert (Parser.parse parsed) prev_logs) ;
+        ignore (encode_parsed_msg (Parser.parse parsed) |> send_msg conn) )
     in
     log_out "created callback" ;
     let msg_input = InputPanel.make 30 25 80 3 input_callback in
@@ -227,7 +227,7 @@ module LoginState = struct
         ; ":" ]
     in
     let warn_text = TextPanel.make 0 2 [] in
-    let input_callback name =
+    let name_callback name =
       if String.contains name '|' then
         TextPanel.set_text warn_text (* TODO: Please make this less jank *)
           [ "\u{001b}[31mT"
@@ -300,7 +300,7 @@ module LoginState = struct
       (* TODO: verify login status *)
     in
     log_out "created callback" ;
-    let name_input = InputPanel.make 1 3 80 3 input_callback in
+    let name_input = InputPanel.make 1 3 80 3 name_callback in
     let panels = {prompt_text; warn_text; name_input} in
     pick [term_update panels (); promise]
     >>= fun _ -> send_msg conn (encode_login (get_user ()))

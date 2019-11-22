@@ -191,10 +191,9 @@ module MessagePanel = struct
           (* TODO: overflow *)
           let p = DoublyLinkedList.get_value !current in
           (* TODO: don't use String.to_seqi *)
-          String.to_seqi (format p)
-          |> Seq.iter (fun (j, c) ->
-              buffer.(j + 1 + t.base.x).(t.base.y + t.base.height - i - 1) <-
-                String.make 1 c) ;
+          let print_list = Parser.output_list (p) in
+          List.iteri (fun j c -> 
+              buffer.(j + 1 + t.base.x).(t.base.y + t.base.height - i - 1) <- c) print_list;
           match DoublyLinkedList.prev_opt !current with
           | Some t ->
             current := t
