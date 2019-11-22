@@ -22,7 +22,8 @@ type connection =
   ; sockadd: Lwt_unix.sockaddr }
 
 (* TODO: Get an actual ip address (currently points to localhost) *)
-let listen_address = Unix.inet_addr_loopback
+(* let listen_address = Unix.inet_addr_loopback *)
+let listen_address = Unix.inet_addr_any
 
 let port = 9000
 
