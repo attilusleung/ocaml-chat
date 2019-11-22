@@ -169,7 +169,8 @@ module MessageState = struct
           | None ->
             DoublyLinkedList.empty
         in
-        Hashtbl.replace msg_log (get_selected ()) (DoublyLinkedList.insert parsed prev_logs) ;
+        Hashtbl.replace msg_log (get_selected ())
+          (DoublyLinkedList.insert parsed prev_logs) ;
         ignore (encode_parsed_msg parsed |> send_msg conn) )
     in
     log_out "created callback" ;
@@ -310,16 +311,48 @@ let rec get_interrupt () =
   Lwt_io.read_char Lwt_io.stdin
   >>= function '\x03' -> exit 0 | _ -> get_interrupt ()
 
-let start () =
-  let%lwt conn = pick [create_connection (); get_interrupt ()] in
+let parse_args () =
+  let arg_length = Array.length Sys.argv in
+  if arg_length = 1 then Alias "default"
+  else
+    match Sys.argv.(1) with
+    | "-i" ->
+      if arg_length = 2 then
+        (print_endline "missing ip address parameter for -i";
+         exit 1)
+      else Address Sys.argv.(2)
+    | "-a" ->
+      if arg_length = 2 then
+        (print_endline "missing alias parameter for -a";
+         exit 1)
+      else Alias Sys.argv.(2)
+    | "--help" | "-h" ->
+      print_endline
+        "OcamlChat: A minimalistic chat client written in Ocaml.
+Use: terminal [-i address]
+ or: terminal [-a alias]\n
+Options:
+-i address  connect to server hosted at [address]
+-a alias    connect to the server with the alias [alias]
+
+Possible aliases:
+local       the server hosted locally at localhst
+remote      the official hosted server on a public network
+"
+      ; exit 0
+    | s -> print_endline @@ "unrecognized option " ^ s; exit 1
+
+let start args =
+  let%lwt conn = pick [create_connection args; get_interrupt ()] in
   log_out "connected" ;
+  setraw () ;
   LoginState.init conn () >>= MessageState.init conn
 
 let () =
-  setraw () ;
+  let args =  parse_args () in
   erase Screen ;
   set_cursor 1 1 ;
   Stdlib.print_string "connecting to server..." ;
   flush Stdlib.stdout ;
   Lwt_main.at_exit (fun _ -> unsetraw ()) ;
-  Lwt_main.run @@ start ()
+  Lwt_main.run @@ start args
