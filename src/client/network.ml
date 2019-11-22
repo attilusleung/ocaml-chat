@@ -6,9 +6,13 @@ open Unix
 open Protocol
 open Client
 
+type server_arg = Address of string | Alias of string
+
 let client_address = Unix.(ADDR_INET (inet_addr_loopback, 9001))
 
-let server_address = Unix.(ADDR_INET (inet_addr_of_string "142.93.193.196", 9000))
+let local_address = Unix.(ADDR_INET (inet_addr_loopback, 9000))
+let remote_address = Unix.(ADDR_INET (inet_addr_of_string "142.93.193.196", 9000))
+let default_address = local_address
 
 let port = 9000
 
@@ -24,9 +28,16 @@ let rec while_connect sock server_address =
     (fun _ -> Lwt_unix.connect sock server_address)
     (fun _ -> while_connect sock server_address)
 
-let create_connection () =
+let create_connection address =
   Lwt_unix.(
     log_out "try connect" ;
+    let server_address = match address with
+      | Address a -> Unix.(ADDR_INET (inet_addr_of_string a, 9000))
+      | Alias "default" -> default_address
+      | Alias "local" -> local_address
+      | Alias "remote" -> remote_address
+      | _ -> print_endline "unrecognized alias or ip address"; exit 1
+    in
     let sock = socket PF_INET SOCK_STREAM 0 in
     let%lwt () = while_connect sock server_address in
     (* ignore @@ bind sock client_address; *)
