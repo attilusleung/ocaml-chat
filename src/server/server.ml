@@ -105,4 +105,5 @@ let () =
   print_endline @@ "Server started at "
                    ^ Unix.string_of_inet_addr listen_address
                    ^ ":" ^ string_of_int port ;
+  Lwt_main.at_exit @@ (fun _ -> Lwt_unix.close sock);
   Lwt_main.run @@ serve ()
