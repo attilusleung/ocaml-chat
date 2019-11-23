@@ -25,4 +25,7 @@ currently in use.
 Run `make serve`.
 
 #### Running the client
-Run `make term`.
+Run `make term`. This creates a chat client that connects to any server run on
+the local computer.
+Alternatively, a server is already hosted online. To connect to this server, run
+`make remote`.
