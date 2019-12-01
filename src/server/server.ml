@@ -14,7 +14,8 @@ type connection =
   ; sockadd: Lwt_unix.sockaddr }
 
 (* TODO: Get an actual ip address (currently points to localhost) *)
-let listen_address = Unix.inet_addr_loopback
+(* let listen_address = Unix.inet_addr_loopback *)
+let listen_address = Unix.inet_addr_any
 
 let port = 9000
 
@@ -142,5 +143,6 @@ let () =
   print_endline @@ "Server started at "
                    ^ Unix.string_of_inet_addr listen_address
                    ^ ":" ^ string_of_int port ;
+
   Lwt_main.run
   @@ (serve () >>= fun _ -> Lwt_io.write_line Lwt_io.stdout "ended")

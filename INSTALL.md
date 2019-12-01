@@ -1,13 +1,11 @@
 ## Installation Instructions
 
 ### Installing OPAM packages
-You will need to install the following opam packages:
+Run the command `opam install oUnit ounit-lwt ANSITerminal lwt lwt_ppx` in the command line. The following OPAM packages will be installed:
 - oUnit
 - ounit-lwt
-- Unix
 - ANSITerminal
 - lwt
-- lwt.unix
 - lwt_ppx
 
 ### Running the chatroom
