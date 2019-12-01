@@ -2,11 +2,13 @@ S src
 S src/client
 S src/server
 S src/tests
+S src/common
 B _build
 B _build/src
 B _build/src/client
 B _build/src/server
 B _build/src/tests
+B _build/src/common
 
 PKG oUnit
 PKG ounit-lwt
