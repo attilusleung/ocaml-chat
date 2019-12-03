@@ -60,7 +60,7 @@ module Panel = struct
     buffer.(t.x).(t.y) <- (if strong then ulbcorner else ulcorner) ;
     buffer.(t.x).(t.y + t.height - 1) <-
       (if strong then llbcorner else llcorner) ;
-    buffer.(t.x + t.width - 1).(t.y) <- (if strong then urbcorner else urcorner) ;
+    buffer.(t.x + t.width - 1).(t.y) <-(if strong then urbcorner else urcorner);
     buffer.(t.x + t.width - 1).(t.y + t.height - 1) <-
       (if strong then lrbcorner else lrcorner) ;
     for i = t.x + 1 to t.x + t.width - 2 do
@@ -165,10 +165,10 @@ module MessagePanel = struct
   type t =
     {base: Panel.t; logs: (string, Parser.t DoublyLinkedList.t) Hashtbl.t}
 
-  let make x y width height =
-    let logs = Hashtbl.create 5 in
+  let make x y width height user =
+    let logs = ChatLog.retrieve_chatlog user in
     (* TODO: add logs for default *)
-    Hashtbl.add logs (get_selected ()) DoublyLinkedList.empty ;
+    (* Hashtbl.add logs (get_selected ()) DoublyLinkedList.empty ; *)
     ({base= Panel.make x y width height; logs}, logs)
 
   exception Break

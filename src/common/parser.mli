@@ -1,5 +1,4 @@
 
-(* type t = {time : string; user : string; message : string} *)
 type t
 
 val pack : string -> float -> string -> string -> string
@@ -13,5 +12,7 @@ val parse : string -> t
 val get_from_user : t -> string
 
 val get_to_user : t -> string
+
+val get_message : t -> string
 
 val format : t -> string

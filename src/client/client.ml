@@ -51,5 +51,3 @@ let handle_msg logs users msg =
       ()
   with e ->
     log_out @@ "Unhandled exception occured during decode: " ^ to_string e
-
-(* t := DoublyLinkedList.insert (parse msg) !t ; *)

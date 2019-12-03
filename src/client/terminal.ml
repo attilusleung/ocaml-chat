@@ -156,7 +156,7 @@ module MessageState = struct
 
   let init conn () =
     log_out "attempt msg init" ;
-    let msg_show, msg_log = MessagePanel.make 30 0 80 20 in
+    let msg_show, msg_log = MessagePanel.make 30 0 80 20 (get_user ()) in
     let input_callback msg =
       if msg <> "" then (
         let parsed =
@@ -208,95 +208,22 @@ module LoginState = struct
     let promise, resolver = Lwt.wait () in
     let prompt_text =
       TextPanel.make 0 1
-        [ "C"
-        ; "h"
-        ; "o"
-        ; "o"
-        ; "s"
-        ; "e"
-        ; " "
-        ; "a"
-        ; " "
-        ; "u"
-        ; "s"
-        ; "e"
-        ; "r"
-        ; "n"
-        ; "a"
-        ; "m"
-        ; "e"
-        ; ":" ]
+        [ "C" ; "h" ; "o" ; "o" ; "s" ; "e" ; " " ; "a" ; " " ; "u" ; "s" ; 
+          "e" ; "r" ; "n" ; "a" ; "m" ; "e" ; ":" ]
     in
     let warn_text = TextPanel.make 0 2 [] in
     let input_callback name =
       if String.contains name '|' then
         TextPanel.set_text warn_text (* TODO: Please make this less jank *)
-          [ "\u{001b}[31mT"
-          ; "h"
-          ; "e"
-          ; " "
-          ; "\'"
-          ; "|"
-          ; "\'"
-          ; " "
-          ; "c"
-          ; "h"
-          ; "a"
-          ; "r"
-          ; "a"
-          ; "c"
-          ; "t"
-          ; "e"
-          ; "r"
-          ; " "
-          ; "c"
-          ; "a"
-          ; "n"
-          ; "n"
-          ; "o"
-          ; "t"
-          ; " "
-          ; "b"
-          ; "e"
-          ; " "
-          ; "u"
-          ; "s"
-          ; "e"
-          ; "d"
-          ; " "
-          ; "i"
-          ; "n"
-          ; " "
-          ; "t"
-          ; "h"
-          ; "e"
-          ; " "
-          ; "n"
-          ; "a"
-          ; "m"
-          ; "e\u{001b}[0m" ]
+          [ "\u{001b}[31mT"; "h"; "e"; " "; "\'"; "|"; "\'"; " "; "c"; "h"; 
+            "a"; "r"; "a"; "c"; "t"; "e"; "r"; " "; "c"; "a"; "n"; "n"; "o"; "t"; 
+            " "; "b"; "e"; " "; "u"; "s"; "e"; "d"; " "; "i"; "n"; " "; "t"; "h"; 
+            "e"; " "; "n"; "a"; "m"; "e\u{001b}[0m" ]
       else if name = "" then
         TextPanel.set_text warn_text
-          [ "\u{001b}[31mN"
-          ; "a"
-          ; "m"
-          ; "e"
-          ; " "
-          ; "c"
-          ; "a"
-          ; "n"
-          ; "n"
-          ; "o"
-          ; "t"
-          ; " "
-          ; "b"
-          ; "e"
-          ; " "
-          ; "e"
-          ; "m"
-          ; "p"
-          ; "t"
-          ; "y\u{001b}[0m" ]
+          ["\u{001b}[31mN" ; "a" ; "m" ; "e" ; " " ; "c" ; "a" ; "n" ; "n" ; 
+           "o" ; "t" ; " " ; "b" ; "e" ; " " ; "e" ; "m" ; "p" ; "t" ; 
+           "y\u{001b}[0m" ]
       else (login_user name ; wakeup_later resolver ())
       (* TODO: verify login status *)
     in
@@ -339,7 +266,7 @@ Possible aliases:
 local       the server hosted locally at localhst
 remote      the official hosted server on a public network
 "
-      ; exit 0
+    ; exit 0
     | s -> print_endline @@ "unrecognized option " ^ s; exit 1
 
 let start args =
