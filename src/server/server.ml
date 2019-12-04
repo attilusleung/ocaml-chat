@@ -29,29 +29,29 @@ let bounce msg parsed =
       |> List.iter (fun c ->
           ignore @@ Lwt_io.write_line c.out_channel ("M" ^ msg)) )
 
+let send_chatlogs oc user = 
+  return @@ List.iter (fun m -> ignore @@ Lwt_io.write_line oc ("M" ^ m)) 
+    (retrieve_chatlog user)
+
 (* https://baturin.org/code/lwt-counter-server/ *)
 let rec handle_connection ic oc id () =
   let%lwt line = read_line_opt ic in
   match line with
-  | Some msg ->
-    Lwt_io.write_line stdout @@ msg
-    (* "received: \"" ^ msg ^ "\" from " ^ id *)
-    >>= (fun _ ->
-        match decode msg with
-        | Message m -> log_out msg; bounce msg m
-        | _ -> return ())
+  | Some msg -> 
+    begin
+      match decode msg with
+      | Message m -> 
+        Lwt_io.write_line stdout 
+        @@ (get_from_user m) ^ " sent \"" ^ (get_message m) ^ "\" to " ^ 
+           (get_to_user m)
+        >>= fun _ -> 
+        log_out (pack_t m) (get_to_user m); 
+        log_out (pack_t m) (get_from_user m); 
+        bounce msg m
+      | _ -> return ()
+    end
     >>= handle_connection ic oc id
-  | None ->
-    Lwt_io.write_line stdout @@ "Connection " ^ id ^ " terminated"
-    >>= fun () -> fail ClosedConnection
-
-let write_log oc n () =
-  let logs = retrieve_chatlog n in
-  let rec write lst =
-    match lst with
-    | h::t -> Lwt_io.write_line oc h >>= fun () -> write t
-    | [] -> return () in
-  write logs
+  | None -> fail ClosedConnection
 
 let login_connection ic oc id connection_rec () =
   let%lwt line = read_line_opt ic in
@@ -62,15 +62,14 @@ let login_connection ic oc id connection_rec () =
         Lwt_io.write_line stdout @@ id ^ " logged in as " ^ s
         >>= fun _ ->
         return @@ Hashtbl.add active s connection_rec
-        >>= write_log oc 20 >>= fun _ -> return s (* TODO: Move this *)
+        >>= fun _ -> send_chatlogs oc s
+        >>= fun _ -> return s (* TODO: Move this *)
       | _ ->
         Lwt_unix.close connection_rec.file
         >>= fun _ ->
         Lwt_io.write_line stdout @@ id ^ " sent invalid login message " ^ msg
         >>= fun _ -> fail ClosedConnection )
-  | None ->
-    Lwt_io.write_line stdout @@ "Connection with" ^ id ^ " terminated"
-    >>= fun () -> fail ClosedConnection
+  | None -> fail ClosedConnection
 
 let accept_connection conn =
   let fd, sa = conn in

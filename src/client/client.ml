@@ -28,7 +28,10 @@ let handle_msg logs users msg =
   try
     match decode msg with
     | Message p ->
-      let user = get_from_user p in
+      let user = 
+        if (get_user ()) = get_from_user p 
+        then get_to_user p 
+        else get_from_user p in
       let prev_logs =
         match Hashtbl.find_opt logs user with
         | Some l ->
@@ -51,5 +54,3 @@ let handle_msg logs users msg =
       ()
   with e ->
     log_out @@ "Unhandled exception occured during decode: " ^ to_string e
-
-(* t := DoublyLinkedList.insert (parse msg) !t ; *)
