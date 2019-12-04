@@ -29,6 +29,10 @@ let bounce msg parsed =
       |> List.iter (fun c ->
           ignore @@ Lwt_io.write_line c.out_channel ("M" ^ msg)) )
 
+let send_chatlogs oc user = 
+  return @@ List.iter (fun m -> ignore @@ Lwt_io.write_line oc ("M" ^ m)) 
+    (retrieve_chatlog user)
+
 (* https://baturin.org/code/lwt-counter-server/ *)
 let rec handle_connection ic oc id () =
   let%lwt line = read_line_opt ic in
@@ -58,6 +62,7 @@ let login_connection ic oc id connection_rec () =
         Lwt_io.write_line stdout @@ id ^ " logged in as " ^ s
         >>= fun _ ->
         return @@ Hashtbl.add active s connection_rec
+        >>= fun _ -> send_chatlogs oc s
         >>= fun _ -> return s (* TODO: Move this *)
       | _ ->
         Lwt_unix.close connection_rec.file

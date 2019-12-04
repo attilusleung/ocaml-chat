@@ -7,22 +7,20 @@ let log_out msg user =
   output_string chatlog_file @@ msg ^ "\n"; flush chatlog_file
 
 (* TODO *)
-(* let retrieve_chatlog n user =
-   let chatlog_file_read = open_in_gen [Open_creat; Open_text] 0o640 
-      (user ^ "_chatlog.txt") in
-   let rec chatlog n acc =
-    try
-      if List.length acc >= n
-      then chatlog n ((List.tl acc) @ [input_line chatlog_file_read])
-      else chatlog n (acc @ [input_line chatlog_file_read])
-    with End_of_file -> close_in chatlog_file_read; acc
-   in
-   chatlog n [] *)
-
 let retrieve_chatlog user =
   let chatlog_file_read = open_in_gen [Open_creat; Open_text] 0o640 
       (user ^ "_chatlog.txt") in
   let rec chatlog acc =
+    try
+      chatlog (acc @ [input_line chatlog_file_read])
+    with End_of_file -> close_in chatlog_file_read; acc
+  in
+  chatlog []
+
+(* let retrieve_chatlog user =
+   let chatlog_file_read = open_in_gen [Open_creat; Open_text] 0o640 
+      (user ^ "_chatlog.txt") in
+   let rec chatlog acc =
     try
       let msg = parse (input_line chatlog_file_read) in
       let from_user = get_from_user msg in
@@ -38,6 +36,6 @@ let retrieve_chatlog user =
           | Some lst -> Hashtbl.replace acc from_user (insert msg lst); acc
           | None -> Hashtbl.add acc from_user (insert msg empty); acc in
       chatlog new_acc
-    with End_of_file -> print_string "done"; close_in chatlog_file_read; acc
-  in
-  chatlog (Hashtbl.create 5)
+    with End_of_file -> close_in chatlog_file_read; acc
+   in
+   chatlog (Hashtbl.create 5) *)

@@ -156,7 +156,7 @@ module MessageState = struct
 
   let init conn () =
     log_out "attempt msg init" ;
-    let msg_show, msg_log = MessagePanel.make 30 0 80 20 (get_user ()) in
+    let msg_show, msg_log = MessagePanel.make 30 0 80 20 in
     let input_callback msg =
       if msg <> "" then (
         let parsed =

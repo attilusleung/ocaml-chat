@@ -165,10 +165,10 @@ module MessagePanel = struct
   type t =
     {base: Panel.t; logs: (string, Parser.t DoublyLinkedList.t) Hashtbl.t}
 
-  let make x y width height user =
-    let logs = ChatLog.retrieve_chatlog user in
+  let make x y width height =
+    let logs = Hashtbl.create 5 in
     (* TODO: add logs for default *)
-    (* Hashtbl.add logs (get_selected ()) DoublyLinkedList.empty ; *)
+    Hashtbl.add logs (get_selected ()) DoublyLinkedList.empty ;
     ({base= Panel.make x y width height; logs}, logs)
 
   exception Break
