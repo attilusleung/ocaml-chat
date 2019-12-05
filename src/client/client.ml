@@ -13,9 +13,17 @@ let current_user = ref LoggedOut
 
 let selected_user = ref "hmm" (* TODO *)
 
-let login_user name =
-  if !current_user = LoggedOut then current_user := LoggedIn name
-  else raise AlreadyLoggedIn
+(* let login_user name = *)
+(*   if !current_user != LoggedOut then raise AlreadyLoggedIn; *)
+(*   current_user := LoggedIn name *)
+
+let login_user message =
+  log_out "login";
+  if !current_user != LoggedOut then raise AlreadyLoggedIn;
+  match decode message with
+  | Confirm user -> current_user := (LoggedIn user); true
+  | Fail _ -> false
+  | _ -> false
 
 let get_user () =
   match !current_user with LoggedOut -> raise NotLoggedIn | LoggedIn s -> s
@@ -38,6 +46,7 @@ let handle_msg logs users msg =
       in
       Hashtbl.replace logs user (DoublyLinkedList.insert p prev_logs)
     | Status (a, r) ->
+      log_out "status";
       let rec remove_from_list lst rem acc =
         match lst with
         | [] ->
@@ -48,7 +57,7 @@ let handle_msg logs users msg =
       in
       users := List.append (remove_from_list !users r []) a
     | _ ->
-      ()
+      log_out msg
   with e ->
     log_out @@ "Unhandled exception occured during decode: " ^ to_string e
 

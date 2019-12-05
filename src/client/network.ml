@@ -70,3 +70,6 @@ let rec listen_msg conn logs users () =
   in
   handle_msg logs users msg;
   listen_msg conn logs users ()
+
+let get_msg conn =
+  read_line conn.in_channel

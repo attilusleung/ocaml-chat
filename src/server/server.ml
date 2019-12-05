@@ -14,13 +14,38 @@ type connection =
   ; sockadd: Lwt_unix.sockaddr }
 
 (* TODO: Get an actual ip address (currently points to localhost) *)
-let listen_address = Unix.inet_addr_loopback
+(* let listen_address = Unix.inet_addr_loopback *)
+let listen_address = Unix.inet_addr_any
 
 let port = 9000
 
 let backlog = 5
 
 let active = Hashtbl.create 5
+
+let passwords = Hashtbl.create 20
+
+let get_passwords () =
+  let file = open_in_gen [Open_rdonly] 0o640 "passwd.txt" in
+  let rec get_user () =
+    try
+      ( match input_line file |> String.split_on_char '|' with
+        | h :: t ->
+          Hashtbl.add passwords h @@ (String.concat "|" t |> String.trim)
+        | [] ->
+          () ) ;
+      get_user ()
+    with End_of_file -> ()
+  in
+  get_user ()
+
+let broadcast msg =
+  print_endline (Hashtbl.length active |> string_of_int) ;
+  Hashtbl.iter
+    (fun user conn ->
+       print_endline ("to " ^ user) ;
+       ignore @@ Lwt_io.write_line conn.out_channel msg)
+    active
 
 let bounce msg parsed =
   return
@@ -37,8 +62,10 @@ let rec handle_connection ic oc id () =
     (* "received: \"" ^ msg ^ "\" from " ^ id *)
     >>= (fun _ ->
         match decode msg with
-        | Message m -> log_out msg; bounce msg m
-        | _ -> return ())
+        | Message m ->
+          log_out msg ; bounce msg m
+        | _ ->
+          return ())
     >>= handle_connection ic oc id
   | None ->
     Lwt_io.write_line stdout @@ "Connection " ^ id ^ " terminated"
@@ -48,20 +75,44 @@ let write_log oc n () =
   let logs = retrieve_chatlog n in
   let rec write lst =
     match lst with
-    | h::t -> Lwt_io.write_line oc h >>= fun () -> write t
-    | [] -> return () in
+    | h :: t ->
+      Lwt_io.write_line oc h >>= fun () -> write t
+    | [] ->
+      return ()
+  in
   write logs
 
-let login_connection ic oc id connection_rec () =
+let rec login_connection ic oc id connection_rec () =
   let%lwt line = read_line_opt ic in
   match line with
   | Some msg -> (
       match decode msg with
-      | Login s ->
-        Lwt_io.write_line stdout @@ id ^ " logged in as " ^ s
-        >>= fun _ ->
-        return @@ Hashtbl.add active s connection_rec
-        >>= write_log oc 20 >>= fun _ -> return s (* TODO: Move this *)
+      | Login (u, p) -> (
+          (* TODO: Currently accepts all passwords *)
+          match Hashtbl.find_opt passwords u with
+          | None ->
+            print_endline @@ id ^ " logged in as nonexistent user " ^ u ;
+            ignore @@ Lwt_io.write_line oc encode_fail ;
+            login_connection ic oc id connection_rec ()
+          | Some pass ->
+            if not @@ String.equal pass p then (
+              print_endline @@ id ^ " attempted login with invalid password for " ^ u;
+              ignore @@ Lwt_io.write_line oc encode_fail ;
+              login_connection ic oc id connection_rec () )
+            else
+              Lwt_io.write_line oc @@ encode_confirm u
+              >>= fun _ ->
+              Lwt_io.write_line stdout @@ id ^ " logged in as " ^ u
+              >>= fun _ ->
+              return @@ broadcast (encode_status [u] [])
+              >>= fun _ ->
+              Lwt_io.write_line oc
+                (encode_status (Hashtbl.fold (fun a b c -> a :: c) active []) [])
+              >>= fun _ ->
+              return @@ Hashtbl.add active u connection_rec
+              >>= write_log oc 20
+              >>= fun _ -> return u )
+      (* TODO: Move this *)
       | _ ->
         Lwt_unix.close connection_rec.file
         >>= fun _ ->
@@ -85,7 +136,7 @@ let accept_connection conn =
   let connection_rec =
     {file= fd; in_channel= ic; out_channel= oc; sockadd= sa}
   in
-  Hashtbl.add active id connection_rec ;
+  (* Hashtbl.add active id connection_rec ; *)
   ignore
   @@ Lwt.try_bind
     (login_connection ic oc id connection_rec)
@@ -97,7 +148,10 @@ let accept_connection conn =
                                 ^ ") closed"
              | e ->
                print_endline @@ "An error occured :" ^ to_string e ) ;
-           return @@ Hashtbl.remove active user))
+           return
+           @@
+           ( Hashtbl.remove active user ;
+             broadcast (encode_status [] [id]) )))
     (fun e ->
        match e with
        | ClosedConnection ->
@@ -142,5 +196,6 @@ let () =
   print_endline @@ "Server started at "
                    ^ Unix.string_of_inet_addr listen_address
                    ^ ":" ^ string_of_int port ;
+  get_passwords () ;
   Lwt_main.run
   @@ (serve () >>= fun _ -> Lwt_io.write_line Lwt_io.stdout "ended")
