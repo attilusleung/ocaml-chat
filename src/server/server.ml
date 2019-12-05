@@ -31,13 +31,21 @@ let get_passwords () =
     try
       ( match input_line file |> String.split_on_char '|' with
         | h :: t ->
-          Hashtbl.add passwords h (List.fold_left ( ^ ) "|" t)
+          Hashtbl.add passwords h @@ (String.concat "|" t |> String.trim)
         | [] ->
           () ) ;
       get_user ()
     with End_of_file -> ()
   in
   get_user ()
+
+let broadcast msg =
+  print_endline (Hashtbl.length active |> string_of_int) ;
+  Hashtbl.iter
+    (fun user conn ->
+       print_endline ("to " ^ user) ;
+       ignore @@ Lwt_io.write_line conn.out_channel msg)
+    active
 
 let bounce msg parsed =
   return
@@ -79,26 +87,31 @@ let rec login_connection ic oc id connection_rec () =
   match line with
   | Some msg -> (
       match decode msg with
-      | Login (u, p) ->
-        (* TODO: Currently accepts all passwords *)
-        ( match Hashtbl.find_opt passwords u with
+      | Login (u, p) -> (
+          (* TODO: Currently accepts all passwords *)
+          match Hashtbl.find_opt passwords u with
           | None ->
             print_endline @@ id ^ " logged in as nonexistent user " ^ u ;
-            Lwt_io.write_line oc encode_fail ;
+            ignore @@ Lwt_io.write_line oc encode_fail ;
             login_connection ic oc id connection_rec ()
           | Some pass ->
-            if pass != p then (
-              print_endline @@ id ^ " logged in with invalid password for " ^ u ;
-              Lwt_io.write_line oc encode_fail ;
-              login_connection ic oc id connection_rec ())
+            if not @@ String.equal pass p then (
+              print_endline @@ id ^ " attempted login with invalid password for " ^ u;
+              ignore @@ Lwt_io.write_line oc encode_fail ;
+              login_connection ic oc id connection_rec () )
             else
-        Lwt_io.write_line oc @@ encode_confirm u
-        >>= fun _ ->
-        Lwt_io.write_line stdout @@ id ^ " logged in as " ^ u
-        >>= fun _ ->
-        return @@ Hashtbl.add active u connection_rec
-        >>= write_log oc 20
-        >>= fun _ -> return u )
+              Lwt_io.write_line oc @@ encode_confirm u
+              >>= fun _ ->
+              Lwt_io.write_line stdout @@ id ^ " logged in as " ^ u
+              >>= fun _ ->
+              return @@ broadcast (encode_status [u] [])
+              >>= fun _ ->
+              Lwt_io.write_line oc
+                (encode_status (Hashtbl.fold (fun a b c -> a :: c) active []) [])
+              >>= fun _ ->
+              return @@ Hashtbl.add active u connection_rec
+              >>= write_log oc 20
+              >>= fun _ -> return u )
       (* TODO: Move this *)
       | _ ->
         Lwt_unix.close connection_rec.file
@@ -123,7 +136,7 @@ let accept_connection conn =
   let connection_rec =
     {file= fd; in_channel= ic; out_channel= oc; sockadd= sa}
   in
-  Hashtbl.add active id connection_rec ;
+  (* Hashtbl.add active id connection_rec ; *)
   ignore
   @@ Lwt.try_bind
     (login_connection ic oc id connection_rec)
@@ -135,7 +148,10 @@ let accept_connection conn =
                                 ^ ") closed"
              | e ->
                print_endline @@ "An error occured :" ^ to_string e ) ;
-           return @@ Hashtbl.remove active user))
+           return
+           @@
+           ( Hashtbl.remove active user ;
+             broadcast (encode_status [] [id]) )))
     (fun e ->
        match e with
        | ClosedConnection ->

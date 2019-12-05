@@ -15,7 +15,7 @@ let decode msg =
   | 'L' -> (
       match strip_head msg |> String.split_on_char '|' with
       | h :: t ->
-        let pass = List.fold_left ( ^ ) "" t in
+        let pass = String.concat "|" t |> String.trim in
         Login (h, pass)
       | _ ->
         Malformed )
@@ -27,9 +27,9 @@ let decode msg =
       | h :: t -> (
           match h.[0] with
           | 'A' ->
-            build_status (strip_head msg :: accept) reject t
+            build_status (strip_head h :: accept) reject t
           | 'R' ->
-            build_status accept (strip_head msg :: reject) t
+            build_status accept (strip_head h :: reject) t
           | _ ->
             Malformed )
       | [] ->
@@ -51,3 +51,21 @@ let encode_login username password = "L" ^ username ^ "|" ^ password
 let encode_confirm username = "C" ^ username
 
 let encode_fail = "F"
+
+let encode_status accepted rejected =
+  let acc = Buffer.create 30 in
+  let rec encode c = function
+    | h :: t ->
+      Buffer.add_char acc c ;
+      Buffer.add_string acc h ;
+      Buffer.add_char acc '|' ;
+      encode c t
+    | [] ->
+      ()
+  in
+  Buffer.add_char acc 'S';
+  encode 'A' accepted ;
+  encode 'R' rejected ;
+  Buffer.truncate acc (Buffer.length acc - 1) ;
+  print_endline @@ Buffer.contents acc;
+  Buffer.contents acc

@@ -230,7 +230,7 @@ module StatusPanel = struct
   (* TODO: better data structure *)
 
   let make x y width height =
-    let pointer = ref ["yeet"; "hmm"] in
+    let pointer = ref [] in
     ({base= Panel.make x y width height; users= pointer; selected= 1}, pointer)
 
   let update_passive t lst = t.users := lst

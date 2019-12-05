@@ -46,6 +46,7 @@ let handle_msg logs users msg =
       in
       Hashtbl.replace logs user (DoublyLinkedList.insert p prev_logs)
     | Status (a, r) ->
+      log_out "status";
       let rec remove_from_list lst rem acc =
         match lst with
         | [] ->
@@ -56,7 +57,7 @@ let handle_msg logs users msg =
       in
       users := List.append (remove_from_list !users r []) a
     | _ ->
-      ()
+      log_out msg
   with e ->
     log_out @@ "Unhandled exception occured during decode: " ^ to_string e
 
