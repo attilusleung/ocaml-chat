@@ -13,9 +13,17 @@ let current_user = ref LoggedOut
 
 let selected_user = ref "hmm" (* TODO *)
 
-let login_user name =
-  if !current_user = LoggedOut then current_user := LoggedIn name
-  else raise AlreadyLoggedIn
+(* let login_user name = *)
+(*   if !current_user != LoggedOut then raise AlreadyLoggedIn; *)
+(*   current_user := LoggedIn name *)
+
+let login_user message =
+  log_out "login";
+  if !current_user != LoggedOut then raise AlreadyLoggedIn;
+  match decode message with
+  | Confirm user -> current_user := (LoggedIn user); true
+  | Fail _ -> false
+  | _ -> false
 
 let get_user () =
   match !current_user with LoggedOut -> raise NotLoggedIn | LoggedIn s -> s
