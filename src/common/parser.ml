@@ -6,7 +6,7 @@ type t = {to_user: string; time: float; from_user: string; message: form_message
 
 let format_message string_list =
   let to_format string = 
-    if String.length string = 1 then string
+    if String.length string = 0 then "|"
     else
       match string.[0] with
       | 'b' -> "\027[1m"
@@ -20,8 +20,8 @@ let format_message string_list =
   let rec format_helper list =
     match list with
     | [] -> []
-    | h :: t -> if (to_format h) = h 
-      then {format = "\027[0m"; text = h} :: format_helper t
+    | h :: t -> if (to_format h) = h || (to_format h) = "|"
+      then {format = "\027[0m"; text = (to_format h)} :: format_helper t
       else {format = to_format h; text = String.sub h 1 ((String.length h)-1)} :: format_helper t
 
   in
