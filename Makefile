@@ -1,15 +1,17 @@
-MODULES=src/client/doublyLinkedList src/client/terminal src/client/panel src/client/key src/client/network src/server/server src/client/log src/client/client src/common/parser src/common/protocol src/server/chatLog
+MODULES=src/client/doublyLinkedList src/client/panel src/client/key src/client/client src/common/parser 
+MLS_WITHOUT_MLIS=src/client/terminal src/client/network src/common/protocol src/client/log src/server/server src/server/chatLog
+MLS=$(MODULES:=.ml) $(MLS_WITHOUT_MLIS:=.ml)
+MLIS=$(MODULES:=.mli)
 CLIENTLOC=src/client/
 CLIENT=terminal.native
 SERVELOC=src/server/
 SERVE=server.native
-OBJECTS=$(MODULES:=.cmo)
+OBJECTS=$(MODULES:=.cmo) $(MLS_WITHOUT_MLIS:=.cmo)
 # TESTS=src/tests/testParser
 # TESTOUTPUT=$(TESTS:=.native)
-MLS=$(MODULES:=.ml)
-MLIS=$(MODULES:=.mli)
 OCAMLBUILD=ocamlbuild -use-ocamlfind
-# PKGS=
+PKGS=unix,oUnit,lwt,ANSITerminal,lwt.unix,lwt_ppx
+CMIS=-I _build/src/client/ -I _build/src/common/ -I _build/src/server/
 
 build:
 	$(OCAMLBUILD) $(OBJECTS)
@@ -25,3 +27,21 @@ serve:
 
 test:
 	$(OCAMLBUILD) -tag debug src/tests/testParser.native && ./testParser.native
+
+docs: docs-private docs-public
+	
+docs-public: build
+	mkdir -p doc.public
+	ocamlfind ocamldoc $(CMIS) -package $(PKGS) \
+		-html -stars -d doc.public $(MLIS)
+
+docs-private: build
+	mkdir -p doc.private
+	ocamlfind ocamldoc $(CMIS) -package $(PKGS) \
+		-html -stars -d doc.private \
+		-inv-merge-ml-mli -m A -hide-warnings $(MLIS) $(MLS)
+
+clean:
+	$(OCAMLBUILD) -clean
+	rm -rf doc.public doc.private
+	$(OCAMLBUILD) $(OBJECTS)

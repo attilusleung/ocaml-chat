@@ -17,3 +17,8 @@ let retrieve_chatlog user =
     in
     chatlog []
   with _ -> []
+
+let clear_chatlogs () =
+  let chatlogs = Sys.readdir "./chatlogs/" in
+  for i = 0 to Array.length chatlogs - 1 do
+    Sys.remove @@ "./chatlogs/" ^ chatlogs.(i) done
