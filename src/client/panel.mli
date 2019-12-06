@@ -24,10 +24,11 @@ end
 (** An input panel that acts as a text box for user input *)
 module InputPanel : sig
   type t
-  val make: int -> int -> int -> int -> (string -> unit) -> t
+  val make: int -> int -> int -> int -> bool -> (string -> unit) -> t
   val draw: t -> string array array -> bool -> unit
   val update: t -> Key.key -> unit Lwt.t
-  val get_cursor: t-> int * int
+  val get_cursor: t -> int * int
+  val get_input: t -> string
 end
 
 (** A message panel that displays messages sent to the client *)

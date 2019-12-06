@@ -3,7 +3,7 @@ exception NotLoggedIn
 (* type user *)
 (* TODO: do we need this *)
 
-val login_user : string -> unit
+val login_user : string -> bool
 
 val get_user : unit -> string
 
