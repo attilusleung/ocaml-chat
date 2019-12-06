@@ -191,5 +191,8 @@ let () =
                    ^ Unix.string_of_inet_addr listen_address
                    ^ ":" ^ string_of_int port ;
   get_passwords () ;
+  Lwt_main.at_exit (fun _ ->
+      return
+      @@ Hashtbl.iter (fun _ conn -> ignore @@ Lwt_unix.close conn.file) active) ;
   Lwt_main.run
   @@ (serve () >>= fun _ -> Lwt_io.write_line Lwt_io.stdout "ended")
