@@ -3,13 +3,13 @@ open Parser
 
 let tests =
   [
-    "parse user" >:: (fun _ -> 
+    "parse user" >:: (fun _ ->
         assert_equal "jasper" (get_from_user(parse "yeet|1234|jasper|hello")));
-    "parse message" >:: (fun _ -> 
+    "parse message" >:: (fun _ ->
         assert_equal "hello" (make_message (get_message(parse "yeet|1234|jasper|hello"))));
-    "parse invalid string" >:: (fun _ -> 
-        assert_raises 
-          (Failure "ill-formatted string") 
+    "parse invalid string" >:: (fun _ ->
+        assert_raises
+          (Failure "ill-formatted string")
           (fun () -> parse "hello"));
     "make string list" >:: (fun _ ->
         assert_equal ["\027[0m"; "h"; "e"; "l"; "l"; "o"; "\027[0m"] (output_list (parse "yeet|1234|jasper|hello")));

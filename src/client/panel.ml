@@ -60,7 +60,7 @@ module Panel = struct
     buffer.(t.x).(t.y) <- (if strong then ulbcorner else ulcorner) ;
     buffer.(t.x).(t.y + t.height - 1) <-
       (if strong then llbcorner else llcorner) ;
-    buffer.(t.x + t.width - 1).(t.y) <- (if strong then urbcorner else urcorner) ;
+    buffer.(t.x + t.width - 1).(t.y) <-(if strong then urbcorner else urcorner);
     buffer.(t.x + t.width - 1).(t.y + t.height - 1) <-
       (if strong then lrbcorner else lrcorner) ;
     for i = t.x + 1 to t.x + t.width - 2 do
@@ -81,21 +81,24 @@ module InputPanel = struct
     ; buffer: Buffer.t
     ; mutable cursor: int
     ; mutable length: int
-    ; callback: string -> unit }
+    ; callback: string -> unit
+    ; hidden: bool }
 
-  let make x y width height callback =
+  let make x y width height hidden callback =
     assert (height > 2) ;
     { base= Panel.make x y width height
     ; buffer= Buffer.create width
     ; cursor= 0
     ; length= 0
-    ; callback }
+    ; callback
+    ; hidden }
 
   let draw_input t buffer =
     (* TODO: overflow *)
     Buffer.to_seqi t.buffer
     |> Seq.iter (fun (i, c) ->
-        buffer.(t.base.x + 1 + i).(t.base.y + 1) <- String.make 1 c)
+        buffer.(t.base.x + 1 + i).(t.base.y + 1) <-
+          String.make 1 (if t.hidden then '*' else c))
 
   let draw t buffer strong =
     draw_border t.base buffer strong ;
@@ -157,6 +160,7 @@ module InputPanel = struct
     | CtrlL | CtrlI | CtrlS ->
       return ()
 
+  let get_input t = Buffer.contents t.buffer
 end
 
 module MessagePanel = struct
@@ -201,24 +205,6 @@ module MessagePanel = struct
             raise Break
         done
       with Break -> ()
-
-  (* | e -> *)
-  (*   log_out @@ "unhandled exception " ^ to_string e *)
-
-  (*
-     let update t key =
-       match key with
-       | Char j -> (
-           match t.scroll with
-           | None ->
-             ()
-           | Some scroll -> (
-               match DoublyLinkedList.next_opt (snd scroll) with
-               | None ->
-                 ()
-               | Some s ->
-                 t.scroll <- Some (get_selected (), s) ) )
-  *)
 end
 
 module TextPanel = struct
@@ -243,8 +229,8 @@ module StatusPanel = struct
   (* TODO: better data structure *)
 
   let make x y width height =
-    let pointer = ref ["yeet"; "hmm"] in
-    {base= Panel.make x y width height; users= pointer; selected= 1}, pointer
+    let pointer = ref [] in
+    ({base= Panel.make x y width height; users= pointer; selected= 1}, pointer)
 
   let update_passive t lst = t.users := lst
 
@@ -282,7 +268,9 @@ module StatusPanel = struct
     | Down | Char 'j' ->
       if t.selected < len - 1 then t.selected <- t.selected + 1 ;
       return ()
-    | Enter | Char 'o' -> select_user (List.nth !(t.users) t.selected); return ()
+    | Enter | Char 'o' ->
+      select_user (List.nth !(t.users) t.selected) ;
+      return ()
     | _ ->
       return ()
 end

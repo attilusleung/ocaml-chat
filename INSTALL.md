@@ -1,13 +1,11 @@
 ## Installation Instructions
 
 ### Installing OPAM packages
-You will need to install the following opam packages:
+Run the command `opam install oUnit ounit-lwt ANSITerminal lwt lwt_ppx` in the command line. The following OPAM packages will be installed:
 - oUnit
 - ounit-lwt
-- Unix
 - ANSITerminal
 - lwt
-- lwt.unix
 - lwt_ppx
 
 ### Running the chatroom
@@ -25,4 +23,7 @@ currently in use.
 Run `make serve`.
 
 #### Running the client
-Run `make term`.
+Run `make term`. This creates a chat client that connects to any server run on
+the local computer.
+Alternatively, a server is already hosted online. To connect to this server, run
+`make remote`.

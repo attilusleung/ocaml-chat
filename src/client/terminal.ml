@@ -173,7 +173,7 @@ module MessageState = struct
         ignore (encode_parsed_msg (Parser.parse parsed) |> send_msg conn) )
     in
     log_out "created callback" ;
-    let msg_input = InputPanel.make 30 25 80 3 input_callback in
+    let msg_input = InputPanel.make 30 25 80 3 false input_callback in
     let msg_status, msg_user = StatusPanel.make 0 0 25 23 in
     (* TODO *)
     let panels = {msg_input; msg_show; msg_status} in
@@ -184,7 +184,12 @@ end
 
 module LoginState = struct
   type login_panel_rec =
-    {prompt_text: TextPanel.t; warn_text: TextPanel.t; name_input: InputPanel.t}
+    { prompt_text: TextPanel.t
+    ; warn_text: TextPanel.t
+    ; name_input: InputPanel.t
+    ; pass_input: InputPanel.t }
+
+  let active_name = ref true
 
   let rec draw panels =
     let s = size () in
@@ -192,88 +197,93 @@ module LoginState = struct
     TextPanel.draw panels.prompt_text b ;
     TextPanel.draw panels.warn_text b ;
     InputPanel.draw panels.name_input b false ;
+    InputPanel.draw panels.pass_input b false ;
     set_cursor 1 1 ;
     flush_screen b s ;
-    let cursorx, cursory = InputPanel.get_cursor panels.name_input in
+    let cursorx, cursory =
+      (if !active_name then panels.name_input else panels.pass_input)
+      |> InputPanel.get_cursor
+    in
     set_cursor cursorx cursory ; return ()
 
+  let switch_active key =
+    match key with
+    | CtrlI ->
+      active_name := not !active_name ;
+      return Null
+    | _ ->
+      return key
+
   let rec term_update panels () =
-    draw panels >>= input
-    >>= InputPanel.update panels.name_input
+    draw panels >>= input >>= switch_active
+    >>= (fun k ->
+        if !active_name then InputPanel.update panels.name_input k
+        else InputPanel.update panels.pass_input k)
     >>= term_update panels
+
+  let rec update conn panels promise resolver =
+    log_out "new update cycle" ;
+    pick [term_update panels (); !promise]
+    (* >>= fun _ -> log_out "nani"; return () *)
+    >>= (fun (name, pass) -> send_msg conn (encode_login name pass))
+    >>= fun _ ->
+    log_out "sent" ;
+    return ()
+    >>= (fun _ ->
+        get_msg conn
+        >>= fun i ->
+        log_out i ;
+        return i >>= fun i -> return (login_user i))
+    >>= fun b ->
+    log_out "recieved " ;
+    return b
+    (* >>= fun _ -> return true *)
+    >>= fun b ->
+    log_out "done?" ;
+    if b then return ()
+    else
+      let p, r = Lwt.wait () in
+      promise := p ;
+      resolver := r ;
+      TextPanel.set_text panels.warn_text
+        [ "\u{001b}[31mI"
+        ; "n"
+        ; "v"
+        ; "a"
+        ; "l"
+        ; "i"
+        ; "d"
+        ; " "
+        ; "l"
+        ; "o"
+        ; "g"
+        ; "i"
+        ; "n\u{001b}[0m" ] ;
+      update conn panels promise resolver
+
+  (* >>= fun _ -> ver *)
 
   let init conn () =
     log_out "attempt log init" ;
     let promise, resolver = Lwt.wait () in
+    let promise = ref promise in
+    let resolver = ref resolver in
+    let panel_ref = ref None in
     let prompt_text =
       TextPanel.make 0 1
-        [ "C"
-        ; "h"
-        ; "o"
-        ; "o"
-        ; "s"
-        ; "e"
-        ; " "
-        ; "a"
-        ; " "
-        ; "u"
-        ; "s"
-        ; "e"
-        ; "r"
-        ; "n"
-        ; "a"
-        ; "m"
-        ; "e"
-        ; ":" ]
+        [ "C" ; "h" ; "o" ; "o" ; "s" ; "e" ; " " ; "a" ; " " ; "u" ; "s" ;
+          "e" ; "r" ; "n" ; "a" ; "m" ; "e" ; ":" ]
     in
     let warn_text = TextPanel.make 0 2 [] in
-    let name_callback name =
+    let input_callback _ =
+      let name = InputPanel.get_input (Option.get !panel_ref).name_input in
+      let pass = InputPanel.get_input (Option.get !panel_ref).pass_input in
       if String.contains name '|' then
         TextPanel.set_text warn_text (* TODO: Please make this less jank *)
-          [ "\u{001b}[31mT"
-          ; "h"
-          ; "e"
-          ; " "
-          ; "\'"
-          ; "|"
-          ; "\'"
-          ; " "
-          ; "c"
-          ; "h"
-          ; "a"
-          ; "r"
-          ; "a"
-          ; "c"
-          ; "t"
-          ; "e"
-          ; "r"
-          ; " "
-          ; "c"
-          ; "a"
-          ; "n"
-          ; "n"
-          ; "o"
-          ; "t"
-          ; " "
-          ; "b"
-          ; "e"
-          ; " "
-          ; "u"
-          ; "s"
-          ; "e"
-          ; "d"
-          ; " "
-          ; "i"
-          ; "n"
-          ; " "
-          ; "t"
-          ; "h"
-          ; "e"
-          ; " "
-          ; "n"
-          ; "a"
-          ; "m"
-          ; "e\u{001b}[0m" ]
+          [ "\u{001b}[31mT"; "h"; "e"; " "; "\'"; "|"; "\'"; " "; "c"; "h";
+            "a"; "r"; "a"; "c"; "t"; "e"; "r"; " "; "c"; "a"; "n"; "n"; "o"; "t";
+            " "; "b"; "e"; " "; "u"; "s"; "e"; "d"; " "; "i"; "n"; " "; "t"; "h";
+            "e"; " "; "n"; "a"; "m"; "e\u{001b}[0m" ]
       else if name = "" then
         TextPanel.set_text warn_text
           [ "\u{001b}[31mN"
@@ -296,30 +306,64 @@ module LoginState = struct
           ; "p"
           ; "t"
           ; "y\u{001b}[0m" ]
-      else (login_user name ; wakeup_later resolver ())
+      else wakeup_later !resolver (name, pass)
       (* TODO: verify login status *)
     in
     log_out "created callback" ;
-    let name_input = InputPanel.make 1 3 80 3 name_callback in
-    let panels = {prompt_text; warn_text; name_input} in
-    pick [term_update panels (); promise]
-    >>= fun _ -> send_msg conn (encode_login (get_user ()))
+    let name_input = InputPanel.make 1 3 80 3 false input_callback in
+    let pass_input = InputPanel.make 1 7 80 3 true input_callback in
+    let panels = {prompt_text; warn_text; name_input; pass_input} in
+    panel_ref := Some panels ;
+    log_out "update now" ;
+    update conn panels promise resolver
 end
 
 let rec get_interrupt () =
   Lwt_io.read_char Lwt_io.stdin
   >>= function '\x03' -> exit 0 | _ -> get_interrupt ()
 
-let start () =
-  let%lwt conn = pick [create_connection (); get_interrupt ()] in
+let parse_args () =
+  let arg_length = Array.length Sys.argv in
+  if arg_length = 1 then Alias "default"
+  else
+    match Sys.argv.(1) with
+    | "-i" ->
+      if arg_length = 2 then (
+        print_endline "missing ip address parameter for -i" ;
+        exit 1 )
+      else Address Sys.argv.(2)
+    | "-a" ->
+      if arg_length = 2 then (
+        print_endline "missing alias parameter for -a" ;
+        exit 1 )
+      else Alias Sys.argv.(2)
+    | "--help" | "-h" ->
+      print_endline
+        "OcamlChat: A minimalistic chat client written in Ocaml.\n\
+         Use: terminal [-i address]\n\
+        \ or: terminal [-a alias]\n\n\
+         Options:\n\
+         -i address  connect to server hosted at [address]\n\
+         -a alias    connect to the server with the alias [alias]\n\n\
+         Possible aliases:\n\
+         local       the server hosted locally at localhost\n\
+         remote      the official hosted server on a public network\n" ;
+      exit 0
+    | s ->
+      print_endline @@ "unrecognized option " ^ s ;
+      exit 1
+
+let start args =
+  let%lwt conn = pick [create_connection args; get_interrupt ()] in
   log_out "connected" ;
+  setraw () ;
   LoginState.init conn () >>= MessageState.init conn
 
 let () =
-  setraw () ;
+  let args = parse_args () in
   erase Screen ;
   set_cursor 1 1 ;
   Stdlib.print_string "connecting to server..." ;
   flush Stdlib.stdout ;
   Lwt_main.at_exit (fun _ -> unsetraw ()) ;
-  Lwt_main.run @@ start ()
+  Lwt_main.run @@ start args
