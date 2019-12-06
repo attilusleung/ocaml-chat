@@ -160,7 +160,7 @@ module MessageState = struct
     let input_callback msg =
       if msg <> "" then (
         let parsed =
-          Parser.make (get_selected ()) (time ()) (get_user ()) msg
+          Parser.pack (get_selected ()) (time ()) (get_user ()) msg
         in
         let prev_logs =
           match Hashtbl.find_opt msg_log (get_selected ()) with
@@ -169,9 +169,8 @@ module MessageState = struct
           | None ->
             DoublyLinkedList.empty
         in
-        Hashtbl.replace msg_log (get_selected ())
-          (DoublyLinkedList.insert parsed prev_logs) ;
-        ignore (encode_parsed_msg parsed |> send_msg conn) )
+        Hashtbl.replace msg_log (get_selected ()) (DoublyLinkedList.insert (Parser.parse parsed) prev_logs) ;
+        ignore (encode_parsed_msg (Parser.parse parsed) |> send_msg conn) )
     in
     log_out "created callback" ;
     let msg_input = InputPanel.make 30 25 80 3 false input_callback in
