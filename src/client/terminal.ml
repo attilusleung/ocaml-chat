@@ -272,24 +272,8 @@ module LoginState = struct
     let panel_ref = ref None in
     let prompt_text =
       TextPanel.make 0 1
-        [ "C"
-        ; "h"
-        ; "o"
-        ; "o"
-        ; "s"
-        ; "e"
-        ; " "
-        ; "a"
-        ; " "
-        ; "u"
-        ; "s"
-        ; "e"
-        ; "r"
-        ; "n"
-        ; "a"
-        ; "m"
-        ; "e"
-        ; ":" ]
+        [ "C" ; "h" ; "o" ; "o" ; "s" ; "e" ; " " ; "a" ; " " ; "u" ; "s" ;
+          "e" ; "r" ; "n" ; "a" ; "m" ; "e" ; ":" ]
     in
     let warn_text = TextPanel.make 0 2 [] in
     let input_callback _ =
@@ -297,50 +281,10 @@ module LoginState = struct
       let pass = InputPanel.get_input (Option.get !panel_ref).pass_input in
       if String.contains name '|' then
         TextPanel.set_text warn_text (* TODO: Please make this less jank *)
-          [ "\u{001b}[31mT"
-          ; "h"
-          ; "e"
-          ; " "
-          ; "\'"
-          ; "|"
-          ; "\'"
-          ; " "
-          ; "c"
-          ; "h"
-          ; "a"
-          ; "r"
-          ; "a"
-          ; "c"
-          ; "t"
-          ; "e"
-          ; "r"
-          ; " "
-          ; "c"
-          ; "a"
-          ; "n"
-          ; "n"
-          ; "o"
-          ; "t"
-          ; " "
-          ; "b"
-          ; "e"
-          ; " "
-          ; "u"
-          ; "s"
-          ; "e"
-          ; "d"
-          ; " "
-          ; "i"
-          ; "n"
-          ; " "
-          ; "t"
-          ; "h"
-          ; "e"
-          ; " "
-          ; "n"
-          ; "a"
-          ; "m"
-          ; "e\u{001b}[0m" ]
+          [ "\u{001b}[31mT"; "h"; "e"; " "; "\'"; "|"; "\'"; " "; "c"; "h";
+            "a"; "r"; "a"; "c"; "t"; "e"; "r"; " "; "c"; "a"; "n"; "n"; "o"; "t";
+            " "; "b"; "e"; " "; "u"; "s"; "e"; "d"; " "; "i"; "n"; " "; "t"; "h";
+            "e"; " "; "n"; "a"; "m"; "e\u{001b}[0m" ]
       else if name = "" then
         TextPanel.set_text warn_text
           [ "\u{001b}[31mN"

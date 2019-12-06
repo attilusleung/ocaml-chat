@@ -1,5 +1,4 @@
 open Unix
-open Log
 
 type t = {to_user: string; time: float; from_user: string; message: string}
 
@@ -15,18 +14,12 @@ let format_time time =
   in
   hour ^ ":" ^ minute
 
-let rec parse_help slist =
-  match slist with
+let parse s = 
+  match String.split_on_char '|' s with
   | to_user :: time :: from_user :: h :: t ->
-    { to_user
-    ; time= float_of_string time
-    ; from_user
-    ; (* TODO: malformed input ?*)
-      message= (h ^ if t <> [] then "|" ^ String.concat "|" t else "") }
-  | _ ->
-    raise (Failure "ill-formatted string")
-
-let parse s = parse_help (String.split_on_char '|' s)
+    {to_user; time = float_of_string time; from_user; 
+     message = h ^ if t <> [] then "|" ^ String.concat "|" t else ""}
+  | _ -> raise (Failure "ill-formatted string")
 
 let make to_user time from_user message = {to_user; time; from_user; message}
 
@@ -40,5 +33,7 @@ let pack_t t =
 let get_from_user t = t.from_user
 
 let get_to_user t = t.to_user
+
+let get_message t = t.message
 
 let format t = "[" ^ format_time t.time ^ "] " ^ t.from_user ^ ": " ^ t.message

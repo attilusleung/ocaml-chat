@@ -60,7 +60,7 @@ module Panel = struct
     buffer.(t.x).(t.y) <- (if strong then ulbcorner else ulcorner) ;
     buffer.(t.x).(t.y + t.height - 1) <-
       (if strong then llbcorner else llcorner) ;
-    buffer.(t.x + t.width - 1).(t.y) <- (if strong then urbcorner else urcorner) ;
+    buffer.(t.x + t.width - 1).(t.y) <-(if strong then urbcorner else urcorner);
     buffer.(t.x + t.width - 1).(t.y + t.height - 1) <-
       (if strong then lrbcorner else lrcorner) ;
     for i = t.x + 1 to t.x + t.width - 2 do
