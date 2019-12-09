@@ -90,8 +90,8 @@ let parse_input c =
       return Backspace
     | '\x0d' ->
       return Enter
-    | '\x03' ->
-      (* Ctrl- C *)
+    | '\x03' | '\x11' ->
+      (* Ctrl- C or Ctrl-Q*)
       erase Screen ;
       set_cursor 1 1 ;
       output_string Stdlib.stdout "\x1b[?25h" ;
@@ -118,7 +118,8 @@ module MessageState = struct
     ; msg_input: InputPanel.t
     ; msg_status: StatusPanel.t
     ; login_text: TextPanel.t
-    ; control_text: TextPanel.t}
+    ; control_text: TextPanel.t
+    ; quit_text: TextPanel.t }
   (** [msg_panel_rec] includes all the panels that are shown in this state. *)
 
   (** [panel_switch] is the type of the current active panel. *)
@@ -136,6 +137,7 @@ module MessageState = struct
     StatusPanel.draw panels.msg_status b (!active = MsgStatus) ;
     TextPanel.draw panels.login_text b ;
     TextPanel.draw panels.control_text b ;
+    TextPanel.draw panels.quit_text b ;
     set_cursor 1 1 ;
     flush_screen b s ;
     ( match !active with
@@ -219,10 +221,19 @@ module MessageState = struct
         ; make_formatted "" " : Switch to Input Panel    "
         ; make_formatted "\027[4m\027[7m" "Ctrl-S"
         ; make_formatted "" " : Switch to Status/Online Panel    "
-        ; make_formatted "\027[4m\027[7m" "Ctrl-M"
+        ; make_formatted "\027[4m\027[7m" "Ctrl-L"
         ; make_formatted "" " : Switch to Message Panel    " ]
     in
-    let panels = {msg_input; msg_show; msg_status; login_text; control_text} in
+    let quit_text =
+      TextPanel.make 1 27
+        [ make_formatted "" "Exit with "
+        ; make_formatted "\027[4m\027[7m" "Ctrl-Q"
+        ; make_formatted "" " or "
+        ; make_formatted "\027[4m\027[7m" "Ctrl-C" ]
+    in
+    let panels =
+      {msg_input; msg_show; msg_status; login_text; control_text; quit_text}
+    in
     ignore @@ term_update panels () ;
     listen_msg conn msg_log msg_user ()
 end
