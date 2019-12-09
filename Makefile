@@ -1,5 +1,5 @@
-MODULES=src/client/doublyLinkedList src/client/panel src/client/key src/client/client src/common/parser 
-MLS_WITHOUT_MLIS=src/client/terminal src/client/network src/common/protocol src/client/log src/server/server src/server/chatLog
+MODULES=src/client/doublyLinkedList src/client/panel src/client/key src/client/client src/common/parser src/common/protocol src/client/network
+MLS_WITHOUT_MLIS=src/client/terminal src/client/log src/server/server src/server/chatLog
 MLS=$(MODULES:=.ml) $(MLS_WITHOUT_MLIS:=.ml)
 MLIS=$(MODULES:=.mli)
 CLIENTLOC=src/client/
@@ -29,7 +29,7 @@ test:
 	$(OCAMLBUILD) -tag debug src/tests/test.native && ./test.native
 
 docs: docs-private docs-public
-	
+
 docs-public: build
 	mkdir -p doc.public
 	ocamlfind ocamldoc $(CMIS) -package $(PKGS) \

@@ -8,21 +8,24 @@ open Client
 
 type server_arg = Address of string | Alias of string
 
-let client_address = Unix.(ADDR_INET (inet_addr_loopback, 9001))
-
+(** [local_address] is the inet address of any server running locally. *)
 let local_address = Unix.(ADDR_INET (inet_addr_loopback, 9000))
+(** [remote_address] is the inet address of the "official" online remote server.
+ * *)
 let remote_address = Unix.(ADDR_INET (inet_addr_of_string "142.93.193.196", 9000))
+(** [default_address] is the inet address of the default server that the client
+ * should connect to (if no arguements are provided.) *)
 let default_address = local_address
-
-let port = 9000
-
-let backlog = 10
 
 type connection =
   { socket: Lwt_unix.file_descr
   ; in_channel: Lwt_io.input_channel
   ; out_channel: Lwt_io.output_channel }
 
+(** [while_connect] repeatedly attempts to connect to the server.
+ *
+ * Currently does not work on WSL, assumedly because of WSL's limited support
+ * for sockets. *)
 let rec while_connect sock server_address =
   catch
     (fun _ -> Lwt_unix.connect sock server_address)
@@ -40,7 +43,6 @@ let create_connection address =
     in
     let sock = socket PF_INET SOCK_STREAM 0 in
     let%lwt () = while_connect sock server_address in
-    (* ignore @@ bind sock client_address; *)
     return
       { socket= sock
       ; in_channel= Lwt_io.of_fd Lwt_io.Input sock

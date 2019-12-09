@@ -1,4 +1,4 @@
-(** A module for the shared data type key.
+(** [Key] is a module for the shared data type key.
     Separated to prevent recursive includes *)
 
 (** A type for key presses on a terminal *)
