@@ -151,8 +151,8 @@ let rec login_connection ic oc id connection_rec () =
     fail ClosedConnection
 
 (** [accept_connection conn] is the entrypoint of a new incoming connection
- * [conn]. It adds [conn] to the active connections, attempts to log in the
- * user, and then listens for any other commands. *)
+ * [conn]. It adds [conn] to the active connections, then spawns a new thread
+ * that attempts to log in the user, and then listens for any other commands. *)
 let accept_connection conn =
   let fd, sa = conn in
   let ic = Lwt_io.of_fd Lwt_io.Input fd in
@@ -167,7 +167,6 @@ let accept_connection conn =
   let connection_rec =
     {file= fd; in_channel= ic; out_channel= oc; sockadd= sa}
   in
-  (* Hashtbl.add active id connection_rec ; *)
   ignore
   @@ Lwt.try_bind
     (login_connection ic oc id connection_rec)
@@ -191,6 +190,8 @@ let accept_connection conn =
   let%lwt () = Lwt_io.write_line stdout @@ "new connection from " ^ id in
   return ()
 
+(** [debug_input ()] is a thread that allows the server to send messages to
+ * clients through the terminal interface. *)
 let rec debug_input () =
   let%lwt input = Lwt_io.read_line_opt Lwt_io.stdin in
   ( match input with
@@ -208,12 +209,15 @@ let rec debug_input () =
       return () )
   >>= debug_input
 
+(** [create_server sock] is the main thread of the server that accepts incoming
+ * connections and handles them. *)
 let create_server sock =
   ignore @@ debug_input () ;
-  clear_chatlogs () ;
   let rec serve () = Lwt_unix.accept sock >>= accept_connection >>= serve in
   serve
 
+(** [create_socket ()] is the socket used by the server to listen to incoming
+ * connections. *)
 let create_socket () =
   Lwt_unix.(
     let sock = socket PF_INET SOCK_STREAM 0 in
