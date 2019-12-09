@@ -245,20 +245,8 @@ module LoginState = struct
       let p, r = Lwt.wait () in
       promise := p ;
       resolver := r ;
-      TextPanel.set_text panels.warn_text
-        [ "\u{001b}[31mI"
-        ; "n"
-        ; "v"
-        ; "a"
-        ; "l"
-        ; "i"
-        ; "d"
-        ; " "
-        ; "l"
-        ; "o"
-        ; "g"
-        ; "i"
-        ; "n\u{001b}[0m" ] ;
+      TextPanel.set_text panels.warn_text @@
+        [make_formatted "\027[31m" "Invalid login"];
       update conn panels promise resolver
 
   (* >>= fun _ -> ver *)
@@ -271,8 +259,7 @@ module LoginState = struct
     let panel_ref = ref None in
     let prompt_text =
       TextPanel.make 0 1
-        [ "C" ; "h" ; "o" ; "o" ; "s" ; "e" ; " " ; "a" ; " " ; "u" ; "s" ;
-          "e" ; "r" ; "n" ; "a" ; "m" ; "e" ; ":" ]
+        [make_formatted "" "Choose a username:"]
     in
     let warn_text = TextPanel.make 0 2 [] in
     let input_callback _ =
@@ -280,32 +267,10 @@ module LoginState = struct
       let pass = InputPanel.get_input (Option.get !panel_ref).pass_input in
       if String.contains name '|' then
         TextPanel.set_text warn_text (* TODO: Please make this less jank *)
-          [ "\u{001b}[31mT"; "h"; "e"; " "; "\'"; "|"; "\'"; " "; "c"; "h";
-            "a"; "r"; "a"; "c"; "t"; "e"; "r"; " "; "c"; "a"; "n"; "n"; "o"; "t";
-            " "; "b"; "e"; " "; "u"; "s"; "e"; "d"; " "; "i"; "n"; " "; "t"; "h";
-            "e"; " "; "n"; "a"; "m"; "e\u{001b}[0m" ]
+        [make_formatted "\027[31m" "The \'|\' character cannot be used in the name"]
       else if name = "" then
         TextPanel.set_text warn_text
-          [ "\u{001b}[31mN"
-          ; "a"
-          ; "m"
-          ; "e"
-          ; " "
-          ; "c"
-          ; "a"
-          ; "n"
-          ; "n"
-          ; "o"
-          ; "t"
-          ; " "
-          ; "b"
-          ; "e"
-          ; " "
-          ; "e"
-          ; "m"
-          ; "p"
-          ; "t"
-          ; "y\u{001b}[0m" ]
+        [make_formatted "\027[31m" "Name cannot be empty"]
       else wakeup_later !resolver (name, pass)
       (* TODO: verify login status *)
     in

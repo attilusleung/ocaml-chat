@@ -34,15 +34,15 @@ end
 (** A message panel that displays messages sent to the client *)
 module MessagePanel : sig
   type t
-  val make: int -> int -> int -> int -> 
+  val make: int -> int -> int -> int ->
     t * (string, Parser.t DoublyLinkedList.t) Hashtbl.t
   val draw: t -> string array array -> bool -> unit
 end
 
 module TextPanel : sig
   type t
-  val make: int -> int -> string list -> t
-  val set_text : t -> string list -> unit
+  val make: int -> int -> Parser.form_message list -> t
+  val set_text : t -> Parser.form_message list -> unit
   val draw: t -> string array array -> unit
 end
 

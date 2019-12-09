@@ -10,6 +10,8 @@ type t =
   ; message: form_message list
   ; org_msg: string }
 
+let make_formatted format text = {format; text}
+
 let format_message string_list =
   let to_format string =
     if String.length string = 0 then "|"

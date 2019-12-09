@@ -24,3 +24,7 @@ val format : t -> string
 val make_message : form_message list -> string
 
 val output_list : t -> string list
+
+val message_to_string : form_message list -> string list
+
+val make_formatted : string -> string -> form_message
