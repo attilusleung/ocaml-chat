@@ -196,7 +196,7 @@ module MessagePanel = struct
           let p = DoublyLinkedList.get_value !current in
           (* TODO: don't use String.to_seqi *)
           let print_list = Parser.output_list (p) in
-          List.iteri (fun j c -> 
+          List.iteri (fun j c ->
               buffer.(j + 1 + t.base.x).(t.base.y + t.base.height - i - 1) <- c) print_list;
           match DoublyLinkedList.prev_opt !current with
           | Some t ->
@@ -208,15 +208,16 @@ module MessagePanel = struct
 end
 
 module TextPanel = struct
-  type t = {x: int; y: int; mutable text: string list}
+  type t = {x: int; y: int; mutable text: form_message list}
 
-  let make x y text = {x; y; text}
+  let make x y text = {x; y; text=text}
 
   let set_text t text = t.text <- text
 
   (* TODO: overflow *)
   let draw t buffer =
-    List.iteri (fun j c -> buffer.(j + 1 + t.x).(t.y) <- c) t.text
+    List.iteri (fun j c -> buffer.(j + 1 + t.x).(t.y) <- c) (t.text |>
+                                                             message_to_string)
 end
 
 module StatusPanel = struct

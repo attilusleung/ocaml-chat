@@ -100,13 +100,13 @@ let rec login_connection ic oc id connection_rec () =
               Lwt_io.write_line oc @@ encode_confirm u
               >>= fun _ ->
               Lwt_io.write_line stdout @@ id ^ " logged in as " ^ u
-              (* >>= fun _ ->
-                 return @@ broadcast (encode_status [u] [])
-                 >>= fun _ ->
-                 Lwt_io.write_line oc
-                 (encode_status (Hashtbl.fold (fun a b c -> a :: c) active []) [])
-                 >>= fun _ ->
-                 return @@ Hashtbl.add active u connection_rec *)
+              >>= fun _ ->
+              return @@ broadcast (encode_status [u] [])
+              >>= fun _ ->
+              Lwt_io.write_line oc
+                (encode_status (Hashtbl.fold (fun a b c -> a :: c) active []) [])
+              >>= fun _ ->
+              return @@ Hashtbl.add active u connection_rec
               >>= fun _ -> send_chatlogs oc u >>= fun _ -> return u )
       (* TODO: Move this *)
       | _ ->
@@ -174,7 +174,6 @@ let rec debug_input () =
 
 let create_server sock =
   ignore @@ debug_input () ;
-  clear_chatlogs () ;
   let rec serve () = Lwt_unix.accept sock >>= accept_connection >>= serve in
   serve
 
@@ -192,5 +191,8 @@ let () =
                    ^ Unix.string_of_inet_addr listen_address
                    ^ ":" ^ string_of_int port ;
   get_passwords () ;
+  Lwt_main.at_exit (fun _ ->
+      return
+      @@ Hashtbl.iter (fun _ conn -> ignore @@ Lwt_unix.close conn.file) active) ;
   Lwt_main.run
   @@ (serve () >>= fun _ -> Lwt_io.write_line Lwt_io.stdout "ended")

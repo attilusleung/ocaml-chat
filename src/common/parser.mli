@@ -45,3 +45,7 @@ val make_message : form_message list -> string
 (** [output_list t] is the list of characters in the parsed message [t] that
     may contain formatting. *)
 val output_list : t -> string list
+
+val message_to_string : form_message list -> string list
+
+val make_formatted : string -> string -> form_message

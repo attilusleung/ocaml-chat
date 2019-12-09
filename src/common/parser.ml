@@ -10,6 +10,8 @@ type t =
   ; message: form_message list
   ; org_msg: string }
 
+let make_formatted format text = {format; text}
+
 (** [format_message strs] is the list of formatted strings from the list of 
     strings [strs] that may contain formatting instructions. *)
 let format_message string_list =
