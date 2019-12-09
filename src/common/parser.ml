@@ -12,7 +12,7 @@ type t =
 
 let make_formatted format text = {format; text}
 
-(** [format_message strs] is the list of formatted strings from the list of 
+(** [format_message strs] is the list of formatted strings from the list of
     strings [strs] that may contain formatting instructions. *)
 let format_message string_list =
   let to_format string =
@@ -30,6 +30,8 @@ let format_message string_list =
         "\027[32m"
       | 'y' ->
         "\027[33m"
+      | 'n' ->
+        "\027[0m"
       | _ ->
         string
   in
@@ -55,8 +57,8 @@ let format_message string_list =
   | [] ->
     []
 
-(** [format_time time] is the local 24-hour time that is displayed in a client's 
-    terminal based on float-time [time]. 
+(** [format_time time] is the local 24-hour time that is displayed in a client's
+    terminal based on float-time [time].
     Example: [format_time 1575670849.] is ["17:20"] in Eastern Standard Time. *)
 let format_time time =
   let tm = localtime time in
@@ -70,7 +72,7 @@ let format_time time =
   in
   hour ^ ":" ^ minute
 
-let parse s =  
+let parse s =
   match (String.split_on_char '|' s) with
   | to_user :: time :: from_user :: t ->
     { to_user
@@ -101,7 +103,7 @@ let get_to_user t = t.to_user
 let format t = "[" ^ format_time t.time ^ "] " ^ t.from_user ^ ": "
 
 (** [to_string_list s] is the string [s] as a list of strings, where each string
-    in the list is either a single character or a single character with 
+    in the list is either a single character or a single character with
     formatting instructions. *)
 let rec to_string_list string =
   match string with
