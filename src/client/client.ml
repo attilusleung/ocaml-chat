@@ -9,6 +9,8 @@ exception AlreadyLoggedIn
 
 type user = LoggedIn of string | LoggedOut
 
+type logs = (string, Parser.t DoublyLinkedList.t) Hashtbl.t
+
 let current_user = ref LoggedOut
 
 let selected_user = ref "hmm" (* TODO *)
