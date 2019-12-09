@@ -167,7 +167,7 @@ module MessagePanel = struct
   include Panel
 
   type t =
-    {base: Panel.t; logs: (string, Parser.t DoublyLinkedList.t) Hashtbl.t}
+    {base: Panel.t; logs: Client.logs}
 
   let make x y width height =
     let logs = Hashtbl.create 5 in
