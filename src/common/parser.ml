@@ -10,6 +10,8 @@ type t =
   ; message: form_message list
   ; org_msg: string }
 
+(** [format_message strs] is the list of formatted strings from the list of 
+    strings [strs] that may contain formatting instructions. *)
 let format_message string_list =
   let to_format string =
     if String.length string = 0 then "|"
@@ -51,6 +53,9 @@ let format_message string_list =
   | [] ->
     []
 
+(** [format_time time] is the local 24-hour time that is displayed in a client's 
+    terminal based on float-time [time]. 
+    Example: [format_time 1575670849.] is ["17:20"] in Eastern Standard Time. *)
 let format_time time =
   let tm = localtime time in
   let hour =
@@ -63,19 +68,16 @@ let format_time time =
   in
   hour ^ ":" ^ minute
 
-let rec parse_help slist =
-  match slist with
+let parse s =  
+  match (String.split_on_char '|' s) with
   | to_user :: time :: from_user :: t ->
     { to_user
     ; time= float_of_string time
     ; from_user
-    ; (* TODO: malformed input ?*)
-      message= format_message t
+    ; message= format_message t
     ; org_msg= String.concat "|" t }
   | _ ->
     raise (Failure "ill-formatted string")
-
-let parse s = parse_help (String.split_on_char '|' s)
 
 let rec make_message p =
   match p with [] -> "" | h :: t -> h.text ^ make_message t
@@ -96,6 +98,9 @@ let get_to_user t = t.to_user
 
 let format t = "[" ^ format_time t.time ^ "] " ^ t.from_user ^ ": "
 
+(** [to_string_list s] is the string [s] as a list of strings, where each string
+    in the list is either a single character or a single character with 
+    formatting instructions. *)
 let rec to_string_list string =
   match string with
   | "" ->
@@ -109,6 +114,7 @@ let rec to_string_list string =
       String.sub str 0 1
       :: to_string_list (String.sub str 1 (String.length str - 1))
 
+(** [message_to_string message] is *)
 let rec message_to_string message =
   match message with
   | [] ->
