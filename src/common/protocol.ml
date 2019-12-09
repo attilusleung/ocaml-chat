@@ -6,6 +6,8 @@ type t =
   | Fail of string
   | Malformed
 
+(** [strip_head msg] is [msg] without the command header (the first
+ * character of [msg] *)
 let strip_head msg = String.sub msg 1 (String.length msg - 1)
 
 let decode msg =
