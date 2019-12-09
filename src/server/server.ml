@@ -5,26 +5,42 @@ open Parser
 open Protocol
 open ChatLog
 
+(** [ClosedConnection] is the exception thrown when a connection is closed
+ * either by the client or the server. *)
 exception ClosedConnection
 
+(** [connection] is a type representing the connection between a server and a
+ * client. *)
 type connection =
   { file: Lwt_unix.file_descr
   ; in_channel: Lwt_io.input_channel
   ; out_channel: Lwt_io.output_channel
   ; sockadd: Lwt_unix.sockaddr }
 
-(* TODO: Get an actual ip address (currently points to localhost) *)
-(* let listen_address = Unix.inet_addr_loopback *)
+(** [listen_address] is the ip address which the server listens to. *)
 let listen_address = Unix.inet_addr_any
 
+(** [port] is the port the server is hosted on *)
 let port = 9000
 
+(** [backlog] is the maximum number of pending requests the a single connection
+ * allows *)
 let backlog = 5
 
+(** [active] is the map of all connected users.
+ *
+ * The key of [active] represents the username of each user, and the value is
+ * the active connection of that user. *)
 let active = Hashtbl.create 5
 
+(** [passwords] is a collection of all passwords of all users.
+ *
+ * The key represents the username and the value is the password stored as
+ * plaintext. *)
 let passwords = Hashtbl.create 20
 
+(** [get_passwords ()] populates [passwords] with the passwords stored locally
+ * on the server. *)
 let get_passwords () =
   let file = open_in_gen [Open_rdonly] 0o640 "passwd.txt" in
   let rec get_user () =
@@ -39,6 +55,7 @@ let get_passwords () =
   in
   get_user ()
 
+(** [broadcast msg] sends [msg] to all users in [active] *)
 let broadcast msg =
   print_endline (Hashtbl.length active |> string_of_int) ;
   Hashtbl.iter
@@ -47,19 +64,28 @@ let broadcast msg =
        ignore @@ Lwt_io.write_line conn.out_channel msg)
     active
 
+(** [bounce msg parsed] bounces [msg] and its parsed variant [parsed] back to
+ * its recipient. *)
 let bounce msg parsed =
   return
     ( get_to_user parsed |> Hashtbl.find_all active
       |> List.iter (fun c ->
           ignore @@ Lwt_io.write_line c.out_channel ("M" ^ msg)) )
 
+(** [send_chatlogs oc user] sends all the chatlogs belonging to [user] through
+ * the outchannel [oc] *)
 let send_chatlogs oc user =
   return
   @@ List.iter
     (fun m -> ignore @@ Lwt_io.write_line oc ("M" ^ m))
     (retrieve_chatlog user)
 
-(* https://baturin.org/code/lwt-counter-server/ *)
+(** [handle_connection ic oc id ()] is a thread that handles all incoming
+ * messages from the connection with inchannel [ic], outchannel [oc] and
+ * identifier [id].
+ *
+ * Fails with [ClosedConnection] at end of file. *)
+(* adapted from https://baturin.org/code/lwt-counter-server/ *)
 let rec handle_connection ic oc id () =
   let%lwt line = read_line_opt ic in
   match line with
@@ -78,6 +104,13 @@ let rec handle_connection ic oc id () =
   | None ->
     fail ClosedConnection
 
+(** [login_connection ic oc id connection ()] waits for the login command from
+ * the connection with inchannel [ic], outchannel [oc], identifier [id] and
+ * connection [connection]. The function loops until either the client logins
+ * successfully, the connection closes, or an unexpected message is recieved.
+ *
+ * Fails with [ClosedConnection] if the connection closes at any point during
+ * the thread. *)
 let rec login_connection ic oc id connection_rec () =
   let%lwt line = read_line_opt ic in
   match line with
@@ -113,10 +146,13 @@ let rec login_connection ic oc id connection_rec () =
         Lwt_unix.close connection_rec.file
         >>= fun _ ->
         Lwt_io.write_line stdout @@ id ^ " sent invalid login message " ^ msg
-        >>= fun _ -> fail ClosedConnection )
+        >>= fun _ -> Lwt_unix.close connection_rec.file >>= fun _ -> fail ClosedConnection )
   | None ->
     fail ClosedConnection
 
+(** [accept_connection conn] is the entrypoint of a new incoming connection
+ * [conn]. It adds [conn] to the active connections, attempts to log in the
+ * user, and then listens for any other commands. *)
 let accept_connection conn =
   let fd, sa = conn in
   let ic = Lwt_io.of_fd Lwt_io.Input fd in
