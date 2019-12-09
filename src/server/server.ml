@@ -1,3 +1,7 @@
+(** [Server] is a multithreaded dedicated messaging server that allows
+ * communication between clients. It supports login and sending messages, as
+ * well as a debugging interface. *)
+
 open Lwt
 open Lwt_io
 open Printexc

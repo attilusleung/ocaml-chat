@@ -7,13 +7,20 @@ exception NotLoggedIn
 
 exception AlreadyLoggedIn
 
+(** [user] is a type that represents the user using the client. It is either
+ * logged in with a username or logged out. *)
 type user = LoggedIn of string | LoggedOut
 
 type logs = (string, Parser.t DoublyLinkedList.t) Hashtbl.t
 
+(** [current_user] is the pointer referencing the user using the client. *)
 let current_user = ref LoggedOut
 
-let selected_user = ref "hmm" (* TODO *)
+(** [selected_user] is a pointer referencing the "active" or selected user of
+ * the client, which is the user the client is currently communicating with
+ * directly. All messages will be sent to the selected user, and only mesages to
+ * and from the selected_user is displayed. *)
+let selected_user = ref "" (* TODO *)
 
 (* let login_user name = *)
 (*   if !current_user != LoggedOut then raise AlreadyLoggedIn; *)

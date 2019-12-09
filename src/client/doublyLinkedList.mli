@@ -1,6 +1,6 @@
 (**
-   An implementation of a doubly linked list that can only insert elements at
-   it's head and does not support removal of elements.
+   [DoublyLinkedList] is an implementation of a doubly linked list that can only
+   insert elements at it's head and does not support removal of elements.
 
    The aim of this modules is to provide an abstract data type where given a
    position within the list, the user can seek forward or backwards an arbitary

@@ -1,11 +1,11 @@
-(** Modules for creating panels on a terminal screen. Because why use curses
-    when you can do it yourself? *)
+(** [Panel] includes modules for creating panels on a terminal screen using an
+ * array buffer. Because why use curses when you can do it yourself? *)
 
 (** [PanelWidthTooLarge] is raised when attempting to draw a panel with width
     larger than the width of the terminal *)
 exception PanelWidthTooLarge
-(** [PanelLengthTooLarge] is raised when attempting to draw a panel with length
-    larger than the length of the terminal *)
+(** [PanelHeightTooLarge] is raised when attempting to draw a panel with height
+    larger than the height of the terminal *)
 exception PanelHeightTooLarge
 
 (** A base module included in all panels *)

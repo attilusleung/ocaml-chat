@@ -1,3 +1,7 @@
+(** [Terminal] is the entrypoint for the Messaging Client. It handles most
+ * terminal operations, including flushing to the screen, setting terminal
+ * attributes, handling input, etc. *)
+
 open Array
 open ANSITerminal
 open Unix
@@ -10,8 +14,14 @@ open Parser
 open Client
 open Protocol
 
+(** [termios] is the termios attribute of the terminal before running the
+ * client.
+ *
+ * Used to reset terminal attributes after the client is closed. *)
 let termios = tcgetattr stdin
 
+(** [setraw ()] enables a watered-down version of "raw mode" for the terminal.
+ * *)
 let setraw () =
   let new_term =
     { termios with
@@ -21,16 +31,15 @@ let setraw () =
     ; c_icrnl= false
     ; c_opost= false
     ; c_isig= false }
-    (* c_iexten *)
-    (* ; c_brkint=false *)
-    (* ; c_inpck=false *)
-    (* ; c_vmin= 0 *)
-    (* ; c_vtime= 1 } *)
   in
   tcsetattr stdout TCSANOW new_term
 
+(** [unsetraw ()] disables the watered-down "raw mode" and resets all terminal
+ * attributes. *)
 let unsetraw () = return @@ tcsetattr stdout TCSANOW termios
 
+(** [flush_screen buffer size] flushes [buffer] to the terminal with dimensions
+ * [size] *)
 let flush_screen buffer size =
   for i = 0 to snd size - 1 do
     for j = 0 to fst size - 1 do
@@ -39,11 +48,15 @@ let flush_screen buffer size =
   done ;
   restore_cursor ()
 
+(** [get_char_stdin ()] retrieves a character inputted to standard input from
+ * the last 0.1 seconds. *)
 let get_char_stdin () =
   pick
     [ Lwt_io.read_char Lwt_io.stdin
     ; (Lwt_unix.sleep 0.1 >>= fun _ -> return '\x00') ]
 
+(** [get_escaped seq] attempts to parse an ansi escape sequence to the terminal
+ * character by character using the accumulator [seq]. *)
 let rec get_escaped seq =
   try
     let%lwt c = get_char_stdin () in
@@ -64,6 +77,7 @@ let rec get_escaped seq =
       return Escape
   with End_of_file -> return Escape
 
+(** [parse_input c] is the key recieved from input [c] *)
 let parse_input c =
   try
     match c with
@@ -93,18 +107,25 @@ let parse_input c =
       return Null
   with End_of_file -> return Null
 
+(** [input ()] is the key recieved from standard input. *)
 let input () = get_char_stdin () >>= parse_input
 
+(** [MessageState] represents the main state of the client that sends messages
+ * to and from other clients through the server. *)
 module MessageState = struct
+  (** [msg_panel_rec] includes all the panels that are shown in this state. *)
   type msg_panel_rec =
     { msg_show: MessagePanel.t
     ; msg_input: InputPanel.t
     ; msg_status: StatusPanel.t }
 
+  (** [panel_switch] is the type of the current active panel. *)
   type panel_switch = MsgShow | MsgInput | MsgStatus
 
+  (** [active] is a pointer to the current active panel. *)
   let active = ref MsgInput
 
+  (** [draw panels] draws [panels] onto the terminal. *)
   let rec draw panels =
     let s = size () in
     let b = make_matrix (fst s) (snd s) " " in
@@ -125,6 +146,7 @@ module MessageState = struct
         set_cursor cursorx cursory ) ;
     return ()
 
+  (** [switch_active key] switches the active panel based on the input [key]. *)
   let switch_active key =
     match key with
     | CtrlI ->
@@ -139,6 +161,8 @@ module MessageState = struct
     | k ->
       return k
 
+  (** [update_active panels key] updates the current active pannel in [panels]
+   * with intput [key]. *)
   let update_active panels key =
     match !active with
     | MsgShow ->
@@ -148,12 +172,15 @@ module MessageState = struct
     | MsgStatus ->
       StatusPanel.update_active panels.msg_status key
 
-  let rec term_update conn panels () =
+  (** [term_update panels ()] is the main update loop that updates [panels]
+   * repeatedly. *)
+  let rec term_update panels () =
     draw panels >>= input >>= switch_active
     (* >>= InputPanel.update panels.msg_input *)
     >>= update_active panels
-    >>= term_update conn panels
+    >>= term_update panels
 
+  (** [init conn ()] initializes the MessageState with connection [conn] *)
   let init conn () =
     log_out "attempt msg init" ;
     let msg_show, msg_log = MessagePanel.make 30 0 80 20 in
@@ -178,19 +205,25 @@ module MessageState = struct
     (* TODO *)
     let panels = {msg_input; msg_show; msg_status} in
     (* TODO: wait and cleanup? *)
-    ignore @@ term_update conn panels () ;
+    ignore @@ term_update panels () ;
     listen_msg conn msg_log msg_user ()
 end
 
+(** [LoginState] is the state where the user is logging onto the server. *)
 module LoginState = struct
+  (** [login_panel] is the type representing all panels that are drawn in this
+   * state. *)
   type login_panel_rec =
     { prompt_text: TextPanel.t
     ; warn_text: TextPanel.t
     ; name_input: InputPanel.t
     ; pass_input: InputPanel.t }
 
+  (** [active_name] is whether or not the username input panel is the current
+   * active panel. *)
   let active_name = ref true
 
+  (** [draw panels] draws [panels] onto the terminal. *)
   let rec draw panels =
     let s = size () in
     let b = make_matrix (fst s) (snd s) " " in
@@ -206,6 +239,8 @@ module LoginState = struct
     in
     set_cursor cursorx cursory ; return ()
 
+  (** [switch_active key] toggles the active panel of the state based on input
+   * [key]. *)
   let switch_active key =
     match key with
     | CtrlI ->
@@ -214,6 +249,8 @@ module LoginState = struct
     | _ ->
       return key
 
+  (** [term_update panels ()] is the update loop that updates [panels]
+   * repeatedly. *)
   let rec term_update panels () =
     draw panels >>= input >>= switch_active
     >>= (fun k ->
@@ -221,6 +258,10 @@ module LoginState = struct
         else InputPanel.update panels.pass_input k)
     >>= term_update panels
 
+  (** [update conn panels promise resolver] is the main update loop that updates
+   * panels repeatedly until the client submits their credentials, which then the
+   * thread attempts to login to the server, repeating if it fails but
+   * terminating if it succes. *)
   let rec update conn panels promise resolver =
     log_out "new update cycle" ;
     pick [term_update panels (); !promise]
@@ -249,8 +290,7 @@ module LoginState = struct
         [make_formatted "\027[31m" "Invalid login"];
       update conn panels promise resolver
 
-  (* >>= fun _ -> ver *)
-
+  (** [init conn ()] initializes the LoginState with connection [conn] *)
   let init conn () =
     log_out "attempt log init" ;
     let promise, resolver = Lwt.wait () in
@@ -283,10 +323,20 @@ module LoginState = struct
     update conn panels promise resolver
 end
 
+(** [get_interrupt ()] listesns only for the interupt input and exits the
+ * program if it detects it.
+ *
+ * It actually doesn't detect SIGINT, but the CTRL-C key. Sorry. You should
+ * probably be using a modern terminal anyways. *)
 let rec get_interrupt () =
   Lwt_io.read_char Lwt_io.stdin
   >>= function '\x03' -> exit 0 | _ -> get_interrupt ()
 
+(** [parse_args ()] is the arguments sent to the program. It is used to
+ * determine which server to connect to.
+ *
+ * The function prints a help message if a help option is passed and terminates.
+ * It also terminates if an unrecognized option is passed to the program. *)
 let parse_args () =
   let arg_length = Array.length Sys.argv in
   if arg_length = 1 then Alias "default"
@@ -318,6 +368,7 @@ let parse_args () =
       print_endline @@ "unrecognized option " ^ s ;
       exit 1
 
+(** [start args] starts the client with arguement [args]. *)
 let start args =
   let%lwt conn = pick [create_connection args; get_interrupt ()] in
   log_out "connected" ;

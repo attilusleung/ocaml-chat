@@ -1,3 +1,5 @@
+(** [Network] contains all networking functions used by the client. *)
+
 (** [server_arg] is the type representing the arguements that specify the server
  * which the client should connect to. *)
 type server_arg = Address of string | Alias of string

@@ -1,3 +1,9 @@
+(** [Client] is the backend of the client. This includes login, setting active
+ * users, or parsing incoming messages.
+ *
+ * This module is meant to be abstracted from the networking aspects of the
+ * client, which should be located within [Network] *)
+
 exception NotLoggedIn
 (** [NotLoggedIn] is thrown when there is an attempt to access any user specific
  * information without being logged in *)

@@ -1,10 +1,15 @@
 (* TODO: Replace all failwith with actual exceptions *)
 open Log
 
+(** [EndOfList] is thrown when trying to access an element beyond the end of the
+ * list. *)
 exception EndOfList
 
+(** [EmptyList] is thrown when trying to access elements in an empty list. *)
 exception EmptyList
 
+(** [NotHead] is thrown when trying to add elements to a doubly-linked list
+ * pointer that does not point to its head. *)
 exception NotHead
 
 type 'a entry = {value: 'a; mutable backptr: 'a entry list option}
