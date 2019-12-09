@@ -29,8 +29,8 @@ val get_from_user : t -> string
     sent to. *)
 val get_to_user : t -> string
 
-(** [get_message t] is the message of the parsed message [t] that is being 
-    sent. *)
+(** [get_message t] is the original message of the parsed message [t] that is 
+    being sent. *)
 val get_message : t -> string
 
 (** [format t] is the format of the parsed message [t] that appears in the 

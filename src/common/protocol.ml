@@ -69,5 +69,5 @@ let encode_status accepted rejected =
   encode 'A' accepted ;
   encode 'R' rejected ;
   Buffer.truncate acc (Buffer.length acc - 1) ;
-  print_endline @@ Buffer.contents acc;
+  (* print_endline @@ Buffer.contents acc; *)
   Buffer.contents acc

@@ -210,6 +210,7 @@ let rec debug_input () =
 
 let create_server sock =
   ignore @@ debug_input () ;
+  clear_chatlogs () ;
   let rec serve () = Lwt_unix.accept sock >>= accept_connection >>= serve in
   serve
 
