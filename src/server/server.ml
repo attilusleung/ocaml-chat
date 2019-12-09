@@ -9,17 +9,17 @@ open Parser
 open Protocol
 open ChatLog
 
+exception ClosedConnection
 (** [ClosedConnection] is the exception thrown when a connection is closed
  * either by the client or the server. *)
-exception ClosedConnection
 
-(** [connection] is a type representing the connection between a server and a
- * client. *)
 type connection =
   { file: Lwt_unix.file_descr
   ; in_channel: Lwt_io.input_channel
   ; out_channel: Lwt_io.output_channel
   ; sockadd: Lwt_unix.sockaddr }
+(** [connection] is a type representing the connection between a server and a
+ * client. *)
 
 (** [listen_address] is the ip address which the server listens to. *)
 let listen_address = Unix.inet_addr_any
@@ -46,7 +46,7 @@ let passwords = Hashtbl.create 20
 (** [get_passwords ()] populates [passwords] with the passwords stored locally
  * on the server. *)
 let get_passwords () =
-  let file = open_in_gen [Open_rdonly] 0o640 "passwd.txt" in
+  let file = open_in_gen [Open_rdonly; Open_creat] 0o640 "passwd.txt" in
   let rec get_user () =
     try
       ( match input_line file |> String.split_on_char '|' with
@@ -55,9 +55,15 @@ let get_passwords () =
         | [] ->
           () ) ;
       get_user ()
-    with End_of_file -> ()
+    with End_of_file -> close_in file
   in
   get_user ()
+
+let write_passwords user password =
+  let file = open_out_gen [Open_append; Open_creat] 0o640 "passwd.txt" in
+  output_string file @@ user ^ "|" ^ password ^ "\n";
+  Stdlib.flush file;
+  close_out file
 
 (** [broadcast msg] sends [msg] to all users in [active] *)
 let broadcast msg =
@@ -84,12 +90,13 @@ let send_chatlogs oc user =
     (fun m -> ignore @@ Lwt_io.write_line oc ("M" ^ m))
     (retrieve_chatlog user)
 
+(* adapted from https://baturin.org/code/lwt-counter-server/ *)
+
 (** [handle_connection ic oc id ()] is a thread that handles all incoming
  * messages from the connection with inchannel [ic], outchannel [oc] and
  * identifier [id].
  *
  * Fails with [ClosedConnection] at end of file. *)
-(* adapted from https://baturin.org/code/lwt-counter-server/ *)
 let rec handle_connection ic oc id () =
   let%lwt line = read_line_opt ic in
   match line with
@@ -145,12 +152,31 @@ let rec login_connection ic oc id connection_rec () =
               >>= fun _ ->
               return @@ Hashtbl.add active u connection_rec
               >>= fun _ -> send_chatlogs oc u >>= fun _ -> return u )
-      (* TODO: Move this *)
+      | Register (u, p) ->
+        if Hashtbl.mem passwords u then (
+          print_endline @@ id ^ " attempted to register as existing user " ^ u ;
+          ignore @@ Lwt_io.write_line oc encode_fail ;
+          login_connection ic oc id connection_rec () )
+        else (
+          write_passwords u p ;
+          Hashtbl.replace passwords u p ;
+          Lwt_io.write_line oc @@ encode_confirm u
+          >>= fun _ ->
+          Lwt_io.write_line stdout @@ id ^ " registered as " ^ u
+          >>= fun _ ->
+          return @@ broadcast (encode_status [u] [])
+          >>= fun _ ->
+          Lwt_io.write_line oc
+            (encode_status (Hashtbl.fold (fun a b c -> a :: c) active []) [])
+          >>= fun _ ->
+          return @@ Hashtbl.add active u connection_rec
+          >>= fun _ -> send_chatlogs oc u >>= fun _ -> return u )
       | _ ->
         Lwt_unix.close connection_rec.file
         >>= fun _ ->
         Lwt_io.write_line stdout @@ id ^ " sent invalid login message " ^ msg
-        >>= fun _ -> Lwt_unix.close connection_rec.file >>= fun _ -> fail ClosedConnection )
+        >>= fun _ ->
+        Lwt_unix.close connection_rec.file >>= fun _ -> fail ClosedConnection )
   | None ->
     fail ClosedConnection
 

@@ -60,7 +60,7 @@ module Panel = struct
     buffer.(t.x).(t.y) <- (if strong then ulbcorner else ulcorner) ;
     buffer.(t.x).(t.y + t.height - 1) <-
       (if strong then llbcorner else llcorner) ;
-    buffer.(t.x + t.width - 1).(t.y) <-(if strong then urbcorner else urcorner);
+    buffer.(t.x + t.width - 1).(t.y) <- (if strong then urbcorner else urcorner) ;
     buffer.(t.x + t.width - 1).(t.y + t.height - 1) <-
       (if strong then lrbcorner else lrcorner) ;
     for i = t.x + 1 to t.x + t.width - 2 do
@@ -166,8 +166,7 @@ end
 module MessagePanel = struct
   include Panel
 
-  type t =
-    {base: Panel.t; logs: Client.logs}
+  type t = {base: Panel.t; logs: Client.logs}
 
   let make x y width height =
     let logs = Hashtbl.create 5 in
@@ -195,9 +194,11 @@ module MessagePanel = struct
           (* TODO: overflow *)
           let p = DoublyLinkedList.get_value !current in
           (* TODO: don't use String.to_seqi *)
-          let print_list = Parser.output_list (p) in
-          List.iteri (fun j c ->
-              buffer.(j + 1 + t.base.x).(t.base.y + t.base.height - i - 1) <- c) print_list;
+          let print_list = Parser.output_list p in
+          List.iteri
+            (fun j c ->
+               buffer.(j + 1 + t.base.x).(t.base.y + t.base.height - i - 1) <- c)
+            print_list ;
           match DoublyLinkedList.prev_opt !current with
           | Some t ->
             current := t
@@ -210,14 +211,15 @@ end
 module TextPanel = struct
   type t = {x: int; y: int; mutable text: form_message list}
 
-  let make x y text = {x; y; text=text}
+  let make x y text = {x; y; text}
 
   let set_text t text = t.text <- text
 
   (* TODO: overflow *)
   let draw t buffer =
-    List.iteri (fun j c -> buffer.(j + 1 + t.x).(t.y) <- c) (t.text |>
-                                                             message_to_string)
+    List.iteri
+      (fun j c -> buffer.(j + 1 + t.x).(t.y) <- c)
+      (t.text |> message_to_string)
 end
 
 module StatusPanel = struct
@@ -227,11 +229,9 @@ module StatusPanel = struct
 
   type t = {base: Panel.t; users: string list ref; mutable selected: int}
 
-  (* TODO: better data structure *)
-
   let make x y width height =
     let pointer = ref [] in
-    ({base= Panel.make x y width height; users= pointer; selected= 1}, pointer)
+    ({base= Panel.make x y width height; users= pointer; selected= 0}, pointer)
 
   let update_passive t lst = t.users := lst
 
@@ -261,7 +261,7 @@ module StatusPanel = struct
   let update_active t k =
     let len = List.length !(t.users) in
     if t.selected < 0 then t.selected <- 0
-    else if t.selected >= len then t.selected <- len - 1 ;
+    else if t.selected >= len && len > 0 then t.selected <- len - 1 ;
     match k with
     | Up | Char 'k' ->
       if t.selected > 0 then t.selected <- t.selected - 1 ;
@@ -270,7 +270,7 @@ module StatusPanel = struct
       if t.selected < len - 1 then t.selected <- t.selected + 1 ;
       return ()
     | Enter | Char 'o' ->
-      select_user (List.nth !(t.users) t.selected) ;
+      if len > 0 then select_user (List.nth !(t.users) t.selected) ;
       return ()
     | _ ->
       return ()

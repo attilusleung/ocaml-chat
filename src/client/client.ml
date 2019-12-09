@@ -22,10 +22,6 @@ let current_user = ref LoggedOut
  * and from the selected_user is displayed. *)
 let selected_user = ref "" (* TODO *)
 
-(* let login_user name = *)
-(*   if !current_user != LoggedOut then raise AlreadyLoggedIn; *)
-(*   current_user := LoggedIn name *)
-
 let login_user message =
   log_out "login" ;
   if !current_user != LoggedOut then raise AlreadyLoggedIn ;

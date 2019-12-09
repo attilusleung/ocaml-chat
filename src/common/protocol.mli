@@ -7,6 +7,7 @@
 (** [t] is a type representing a command *)
 type t =
   | Login of string * string
+  | Register of string * string
   | Message of Parser.t
   | Status of string list * string list
   | Confirm of string
@@ -28,6 +29,10 @@ val encode_parsed_msg : Parser.t -> string
 (** [encode_login username password] is an encoded login command with username
  * [username] and password [password] *)
 val encode_login : string -> string -> string
+
+(** [encode_register username password] is an encoded register command with username
+ * [username] and password [password] *)
+val encode_register : string -> string -> string
 
 (** [encode_confirm username] is an encoded confirmation message confirming a
  * successful login with username [username] *)

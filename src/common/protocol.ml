@@ -1,5 +1,6 @@
 type t =
   | Login of string * string
+  | Register of string * string
   | Message of Parser.t
   | Status of string list * string list
   | Confirm of string
@@ -11,16 +12,29 @@ type t =
 let strip_head msg = String.sub msg 1 (String.length msg - 1)
 
 let decode msg =
+  let get_name_pass m =
+    match strip_head m |> String.split_on_char '|' with
+    | h :: t ->
+      let pass = String.concat "|" t |> String.trim in
+      Some (h, pass)
+    | _ ->
+      None
+  in
   match msg.[0] with
   | 'M' ->
     Message (Parser.parse @@ strip_head msg)
   | 'L' -> (
-      match strip_head msg |> String.split_on_char '|' with
-      | h :: t ->
-        let pass = String.concat "|" t |> String.trim in
-        Login (h, pass)
-      | _ ->
-        Malformed )
+      match get_name_pass msg with
+      | None ->
+        Malformed
+      | Some (user, pass) ->
+        Login (user, pass) )
+  | 'R' -> (
+      match get_name_pass msg with
+      | None ->
+        Malformed
+      | Some (user, pass) ->
+        Register (user, pass) )
   | 'C' ->
     let len = String.length msg in
     if len > 1 then Confirm (strip_head msg) else Malformed
@@ -50,6 +64,8 @@ let encode_parsed_msg p = "M" ^ Parser.pack_t p
 
 let encode_login username password = "L" ^ username ^ "|" ^ password
 
+let encode_register username password = "R" ^ username ^ "|" ^ password
+
 let encode_confirm username = "C" ^ username
 
 let encode_fail = "F"
@@ -65,7 +81,7 @@ let encode_status accepted rejected =
     | [] ->
       ()
   in
-  Buffer.add_char acc 'S';
+  Buffer.add_char acc 'S' ;
   encode 'A' accepted ;
   encode 'R' rejected ;
   Buffer.truncate acc (Buffer.length acc - 1) ;
