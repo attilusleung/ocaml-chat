@@ -1,3 +1,4 @@
+(** The type of a protocol message. *)
 type t =
   | Login of string * string
   | Message of Parser.t
@@ -6,8 +7,10 @@ type t =
   | Fail of string
   | Malformed
 
+(** [strip_head msg] is [msg] without its first character. *)
 let strip_head msg = String.sub msg 1 (String.length msg - 1)
 
+(** [decode msg] is the protocol message extracted from the plaintext [msg]. *)
 let decode msg =
   match msg.[0] with
   | 'M' ->
@@ -41,17 +44,29 @@ let decode msg =
   | _ ->
     Malformed
 
+(** [encode_msg to_user time from_user msg] encodes [to_user], the time [time],
+    [from_user], and the original message [msg] into a protocol-readable 
+    plaintext message. *)
 let encode_msg to_user time from_user msg =
   "M" ^ Parser.pack to_user time from_user msg
 
+(** [encode_parsed_msg p] encodes the parsed message [p] into a protocol 
+    message. *)
 let encode_parsed_msg p = "M" ^ Parser.pack_t p
 
+(** [encode_login username password] encodes the user [username] and their 
+    password [password] into a protocol login message. *)
 let encode_login username password = "L" ^ username ^ "|" ^ password
 
+(** [encode_confirm username] encodes the user [username] into a protocol 
+    confirm message. *)
 let encode_confirm username = "C" ^ username
 
+(** The protocol fail message. *)
 let encode_fail = "F"
 
+(** [encode_status accepted rejected] encodes the accepted users [accepted] 
+    and the rejected users [rejected] into a protocol status message. *)
 let encode_status accepted rejected =
   let acc = Buffer.create 30 in
   let rec encode c = function
@@ -67,5 +82,5 @@ let encode_status accepted rejected =
   encode 'A' accepted ;
   encode 'R' rejected ;
   Buffer.truncate acc (Buffer.length acc - 1) ;
-  print_endline @@ Buffer.contents acc;
+  (* print_endline @@ Buffer.contents acc; *)
   Buffer.contents acc
