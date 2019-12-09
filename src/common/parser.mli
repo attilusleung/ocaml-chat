@@ -46,6 +46,10 @@ val make_message : form_message list -> string
     may contain formatting. *)
 val output_list : t -> string list
 
+(** [message_to_string message] is the formatted list of characters contained 
+    in the list of formatted strings [message]. *)
 val message_to_string : form_message list -> string list
 
+(** [make_formatted fmt text] is the formatted message with [fmt] formatting and
+    the message [text]. *)
 val make_formatted : string -> string -> form_message

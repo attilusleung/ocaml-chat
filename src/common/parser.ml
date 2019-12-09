@@ -116,7 +116,6 @@ let rec to_string_list string =
       String.sub str 0 1
       :: to_string_list (String.sub str 1 (String.length str - 1))
 
-(** [message_to_string message] is *)
 let rec message_to_string message =
   match message with
   | [] ->
@@ -128,8 +127,6 @@ let rec message_to_string message =
     @ message_to_string t
 
 let output_list t = to_string_list (format t) @ message_to_string t.message
-
-(* let get_message t = t.message |> message_to_string |> String.concat "" *)
 
 let pack_t t =
   t.to_user ^ "|" ^ string_of_float t.time ^ "|" ^ t.from_user ^ "|"
