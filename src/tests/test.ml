@@ -26,48 +26,102 @@ open OUnit2
 open Parser
 open Protocol
 
-let s = "hmm|1575869243.|yeet||rhi|gbye"
+let s1 = "hmm|1575869243.|yeet||rhi|gbye"
+let s2 = "yeet|1575869243.|hmm||||"
+let s3 = "...|999999999.|!@#$||b..|y.."
 
 let parser_tests =
   [
-    "parse from_user" >:: (fun _ ->
-        assert_equal "yeet" (s |> parse |> get_from_user));
-    "parse to_user" >:: (fun _ ->
-        assert_equal "hmm" (s |> parse |> get_to_user));
-    "parse message" >:: (fun _ ->
-        assert_equal "|rhi|gbye" (s |> parse |> get_message));
+    "parse from_user 1" >:: (fun _ ->
+        assert_equal "yeet" (s1 |> parse |> get_from_user));
+    "parse from_user 2" >:: (fun _ ->
+        assert_equal "hmm" (s2 |> parse |> get_from_user));
+    "parse from_user 3" >:: (fun _ ->
+        assert_equal "!@#$" (s3 |> parse |> get_from_user));
+    "parse to_user 1" >:: (fun _ ->
+        assert_equal "hmm" (s1 |> parse |> get_to_user));
+    "parse to_user 2" >:: (fun _ ->
+        assert_equal "yeet" (s2 |> parse |> get_to_user));
+    "parse to_user 3" >:: (fun _ ->
+        assert_equal "..." (s3 |> parse |> get_to_user));
+    "parse message 1" >:: (fun _ ->
+        assert_equal "|rhi|gbye" (s1 |> parse |> get_message));
+    "parse message 2" >:: (fun _ ->
+        assert_equal "|||" (s2 |> parse |> get_message));
+    "parse message 3" >:: (fun _ ->
+        assert_equal "|b..|y.." (s3 |> parse |> get_message));
     "parse invalid plaintext" >:: (fun _ ->
         assert_raises
           (Failure "ill-formatted string") (fun () -> parse "this is invalid"));
-    "make string list" >:: (fun _ ->
+    "make string list 1" >:: (fun _ ->
         assert_equal 
           ["["; "0"; "0"; ":"; "2"; "7"; "]"; " "; "y"; "e"; "e"; "t"; ":"; 
            " \027[0m"; "\027[31mh"; "i\027[0m"; "\027[32mb"; "y"; "e\027[0m"] 
-          (s |> parse |> output_list));
-    "make" >:: (fun _ ->
-        assert_equal (parse s) (make "hmm" 1575869243. "yeet" "|rhi|gbye"));
-    "pack" >:: (fun _ ->
-        assert_equal s (pack "hmm" 1575869243. "yeet" "|rhi|gbye"));
-    "pack_t" >:: (fun _ -> assert_equal s (s |> parse |> pack_t));
-    "format t" >:: (fun _ ->
-        assert_equal "[00:27] yeet: " (s |> parse |> format))
+          (s1 |> parse |> output_list));
+    "make string list 2" >:: (fun _ ->
+        assert_equal 
+          ["["; "0"; "0"; ":"; "2"; "7"; "]"; " "; "h"; "m"; "m"; ":"; 
+           " \027[0m"; "\027[0m|\027[0m"; "\027[0m|\027[0m"; "\027[0m|\027[0m"] 
+          (s2 |> parse |> output_list));
+    "make string list 3" >:: (fun _ ->
+        assert_equal 
+          ["["; "2"; "1"; ":"; "4"; "6"; "]"; " "; "!"; "@"; "#"; "$"; ":"; 
+           " \027[0m"; "\027[1m."; ".\027[0m"; "\027[33m."; ".\027[0m"]
+          (s3 |> parse |> output_list));
+    "make 1" >:: (fun _ ->
+        assert_equal (parse s1) (make "hmm" 1575869243. "yeet" "|rhi|gbye"));
+    "make 2" >:: (fun _ ->
+        assert_equal (parse s2) (make "yeet" 1575869243. "hmm" "|||"));
+    "make 3" >:: (fun _ ->
+        assert_equal (parse s3) (make "..." 999999999. "!@#$" "|b..|y.."));
+    "pack 1" >:: (fun _ ->
+        assert_equal s1 (pack "hmm" 1575869243. "yeet" "|rhi|gbye"));
+    "pack 2" >:: (fun _ ->
+        assert_equal s2 (pack "yeet" 1575869243. "hmm" "|||"));
+    "pack 3" >:: (fun _ ->
+        assert_equal s3 (pack "..." 999999999. "!@#$" "|b..|y.."));
+    "pack_t 1" >:: (fun _ -> assert_equal s1 (s1 |> parse |> pack_t));
+    "pack_t 2" >:: (fun _ -> assert_equal s2 (s2 |> parse |> pack_t));
+    "pack_t 3" >:: (fun _ -> assert_equal s3 (s3 |> parse |> pack_t));
+    "format 1" >:: (fun _ ->
+        assert_equal "[00:27] yeet: " (s1 |> parse |> format));
+    "format 2" >:: (fun _ ->
+        assert_equal "[00:27] hmm: " (s2 |> parse |> format));
+    "format 3" >:: (fun _ ->
+        assert_equal "[21:46] !@#$: " (s3 |> parse |> format));
   ]
 
 let protocol_tests = 
   let m = "Mhmm|1575869243.|yeet||rhi|gbye" in
+  let m' = "Myeet|1575869243.|hmm||||" in
+  let m'' = "M...|999999999.|!@#$||b..|y.." in
   let l = "Lyeet|1234" in
+  let l' = "Lhmm|1" in
+  let l'' = "L!@#$|||||" in
   let c = "Cyeet" in
   let a = "SAyeet" in
   let r = "SRhmm" in
   let ar = "SAyeet|Rhmm" in
   let f = "Ffailure" in
   [
-    "strip head" >:: (fun _ ->
+    "strip head 1" >:: (fun _ ->
         assert_equal "hmm|1575869243.|yeet||rhi|gbye" (strip_head m));
-    "decode message" >:: (fun _ ->
-        assert_equal (Message (parse s)) (decode m));
-    "decode login" >:: (fun _ ->
+    "strip head 2" >:: (fun _ ->
+        assert_equal "yeet|1575869243.|hmm||||" (strip_head m'));
+    "strip head 3" >:: (fun _ ->
+        assert_equal "...|999999999.|!@#$||b..|y.." (strip_head m''));
+    "decode message 1" >:: (fun _ ->
+        assert_equal (Message (parse s1)) (decode m));
+    "decode message 2" >:: (fun _ ->
+        assert_equal (Message (parse s2)) (decode m'));
+    "decode message 3" >:: (fun _ ->
+        assert_equal (Message (parse s3)) (decode m''));
+    "decode login 1" >:: (fun _ ->
         assert_equal (Login ("yeet", "1234")) (decode l));
+    "decode login 2" >:: (fun _ ->
+        assert_equal (Login ("hmm", "1")) (decode l'));
+    "decode login 3" >:: (fun _ ->
+        assert_equal (Login ("!@#$", "||||")) (decode l''));
     "decode malformed login" >:: (fun _ ->
         assert_equal Malformed (decode "hello"));
     "decode confirm" >:: (fun _ ->
@@ -82,12 +136,24 @@ let protocol_tests =
         assert_equal Malformed (decode "SAyeet|foo"));
     "decode fail" >:: (fun _ ->
         assert_equal (Fail "failure") (decode f));
-    "encode message" >:: (fun _ -> 
+    "encode message 1" >:: (fun _ -> 
         assert_equal m (encode_msg "hmm" 1575869243. "yeet" "|rhi|gbye"));
-    "encode parsed message" >:: (fun _ ->
-        assert_equal m (s |> parse |> encode_parsed_msg));
-    "encode login" >:: (fun _ ->
+    "encode message 2" >:: (fun _ -> 
+        assert_equal m' (encode_msg "yeet" 1575869243. "hmm" "|||"));
+    "encode message 3" >:: (fun _ -> 
+        assert_equal m'' (encode_msg "..." 999999999. "!@#$" "|b..|y.."));
+    "encode parsed message 1" >:: (fun _ ->
+        assert_equal m (s1 |> parse |> encode_parsed_msg));
+    "encode parsed message 2" >:: (fun _ ->
+        assert_equal m' (s2 |> parse |> encode_parsed_msg));
+    "encode parsed message 3" >:: (fun _ ->
+        assert_equal m'' (s3 |> parse |> encode_parsed_msg));
+    "encode login 1" >:: (fun _ ->
         assert_equal l (encode_login "yeet" "1234"));
+    "encode login 2" >:: (fun _ ->
+        assert_equal l' (encode_login "hmm" "1"));
+    "encode login 3" >:: (fun _ ->
+        assert_equal l'' (encode_login "!@#$" "||||"));
     "encode confirm" >:: (fun _ ->
         assert_equal c (encode_confirm "yeet"));
     "encode status accept" >:: (fun _ ->
