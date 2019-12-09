@@ -30,8 +30,8 @@ val encode_parsed_msg : Parser.t -> string
  * [username] and password [password] *)
 val encode_login : string -> string -> string
 
-(** [encode_register username password] is an encoded register command with username
- * [username] and password [password] *)
+(** [encode_register username password] is an encoded register command with 
+ * username [username] and password [password] *)
 val encode_register : string -> string -> string
 
 (** [encode_confirm username] is an encoded confirmation message confirming a

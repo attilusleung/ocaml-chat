@@ -252,7 +252,8 @@ module LoginState = struct
   (** [login_panel] is the type representing all panels that are drawn in this
    * state. *)
 
-  (** [action] is the type that represents an action after recieving user input *)
+  (** [action] is the type that represents an action after recieving user 
+      input. *)
   type action = Login of (string * string) | Register
 
   (** [active_name] is whether or not the username input panel is the current
@@ -299,9 +300,9 @@ module LoginState = struct
     >>= term_update panels funcs
 
   (** [update conn panels promise resolver] is the main update loop that updates
-   * panels repeatedly until the client submits their credentials, which then the
-   * thread attempts to login to the server, repeating if it fails but
-   * terminating if it succes. *)
+   * panels repeatedly until the client submits their credentials, which then 
+   *  the thread attempts to login to the server, repeating if it fails but
+   * terminating if it succeeds. *)
   let rec update conn panels promise resolver =
     log_out "new update cycle" ;
     let reg_promise, reg_resolv = wait () in
@@ -338,8 +339,6 @@ module LoginState = struct
       @@ [ make_formatted "\027[31m"
              (if act <> Register then "Invalid login" else "Username taken") ] ;
       update conn panels promise resolver
-
-  (* >>= fun _ -> log_out "nani"; return () *)
 
   (** [init conn ()] initializes the LoginState with connection [conn] *)
   let init conn () =

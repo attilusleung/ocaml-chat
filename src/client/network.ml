@@ -12,7 +12,7 @@ type server_arg = Address of string | Alias of string
 let local_address = Unix.(ADDR_INET (inet_addr_loopback, 9000))
 (** [remote_address] is the inet address of the "official" online remote server.
  * *)
-let remote_address = Unix.(ADDR_INET (inet_addr_of_string "142.93.193.196", 9000))
+let remote_address = Unix.(ADDR_INET(inet_addr_of_string"142.93.193.196", 9000))
 (** [default_address] is the inet address of the default server that the client
  * should connect to (if no arguements are provided.) *)
 let default_address = local_address

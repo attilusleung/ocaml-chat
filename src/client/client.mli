@@ -41,8 +41,8 @@ val get_selected : unit -> string
 (** [get_user ()] retrieves the "active" user that the logged in user is trying
  * to talk to.
  *
- * This is mainly used for MessagePanel and InputPanel, which uses the function to determine
- * which messages to show or who to send the messages to. *)
+ * This is mainly used for MessagePanel and InputPanel, which uses the function 
+ * to determine which messages to show or who to send the messages to. *)
 
 val handle_msg : logs -> string list ref -> string -> unit
 (** [handle_msg logs users msg] decodes and parses [msg], and performs actions

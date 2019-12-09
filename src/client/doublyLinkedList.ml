@@ -1,4 +1,3 @@
-(* TODO: Replace all failwith with actual exceptions *)
 open Log
 
 (** [EndOfList] is thrown when trying to access an element beyond the end of the
@@ -46,9 +45,10 @@ let rep_ok t =
         match t with
         | [] ->
           true
-        | _ :: ta as l -> (
-            (* Nested match statements are necessary to preserve physical equality
-             * of variables *)
+        | _ :: ta as l -> 
+          begin
+            (* Nested match statements are necessary to preserve physical 
+               equality of variables *)
             match ta with
             | [] ->
               true
@@ -59,7 +59,7 @@ let rep_ok t =
             (* Only the first element of the list should have a None value for
              * backptr *)
             | {backptr= None} :: _ ->
-              false )
+              false end
       in
       assert (pointer_ok t) ;
       t
