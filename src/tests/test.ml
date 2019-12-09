@@ -104,12 +104,6 @@ let protocol_tests =
   let ar = "SAyeet|Rhmm" in
   let f = "Ffailure" in
   [
-    "strip head 1" >:: (fun _ ->
-        assert_equal "hmm|1575869243.|yeet||rhi|gbye" (strip_head m));
-    "strip head 2" >:: (fun _ ->
-        assert_equal "yeet|1575869243.|hmm||||" (strip_head m'));
-    "strip head 3" >:: (fun _ ->
-        assert_equal "...|999999999.|!@#$||b..|y.." (strip_head m''));
     "decode message 1" >:: (fun _ ->
         assert_equal (Message (parse s1)) (decode m));
     "decode message 2" >:: (fun _ ->
