@@ -353,10 +353,10 @@ module LoginState = struct
            let p, r = Lwt.wait () in
            promise := p ;
            resolver := r ;
-           TextPanel.set_text panels.warn_text
-           @@ [ make_formatted "\027[31m"
-                  (if act <> Register then "Invalid login" else "Username taken")
-              ] ;
+           TextPanel.set_text panels.warn_text @@ 
+           [make_formatted "\027[31m"
+              (if act <> Register then "Invalid login" else "Username taken")
+           ] ;
            update conn panels promise resolver)
       (function
         | InvalidInput e ->

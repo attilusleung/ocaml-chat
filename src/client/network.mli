@@ -26,4 +26,5 @@ val listen_msg :
  * [users] whenever there are changes in the users that are online/offline *)
 
 val get_msg : connection -> string Lwt.t
-(** [get_msg conn] is the message that the server in [conn] sends to the client. *)
+(** [get_msg conn] is the message that the server in [conn] sends to the 
+    client. *)
