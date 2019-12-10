@@ -31,7 +31,7 @@ let get_passwords () =
     try
       ( match input_line file |> String.split_on_char '|' with
         | h :: t ->
-          Hcashtbl.add passwords h @@ (String.concat "|" t |> String.trim)
+          Hashtbl.add passwords h @@ (String.concat "|" t |> String.trim)
         | [] ->
           () ) ;
       get_user ()
