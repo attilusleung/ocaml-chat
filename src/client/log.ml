@@ -1,4 +1,4 @@
-(** A simple logging module that writes everything to a log file *)
+(** [Log] is a simple logging module that writes everything to a log file. *)
 
 (** [log_file] is the file descriptor of the log file *)
 let log_file = open_out "log.txt"

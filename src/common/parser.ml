@@ -12,7 +12,7 @@ type t =
 
 let make_formatted format text = {format; text}
 
-(** [format_message strs] is the list of formatted strings from the list of 
+(** [format_message strs] is the list of formatted strings from the list of
     strings [strs] that may contain formatting instructions. *)
 let format_message string_list =
   let to_format string =
@@ -20,16 +20,26 @@ let format_message string_list =
     else if String.length string = 1 then string
     else
       match string.[0] with
-      | 'b' ->
-        "\027[1m"
-      | 'u' ->
-        "\027[4m"
+      | 'B' ->
+        "\027[1m"     (* bold *)
+      | 'U' -> 
+        "\027[4m"     (* underline *)
+      | 'R' ->
+        "\027[7m"     (* reversed *)
       | 'r' ->
-        "\027[31m"
+        "\027[31m"    (* red *)
       | 'g' ->
-        "\027[32m"
+        "\027[32m"    (* green *)
       | 'y' ->
-        "\027[33m"
+        "\027[33m"    (* yellow *)
+      | 'b' ->
+        "\027[34m"    (* blue *)
+      | 'p' ->
+        "\027[35;1m"  (* purple *)
+      | 'c' ->
+        "\027[36m"    (* cyan *)
+      | 'n' ->
+        "\027[0m"     (* normal *)
       | _ ->
         string
   in
@@ -55,8 +65,8 @@ let format_message string_list =
   | [] ->
     []
 
-(** [format_time time] is the local 24-hour time that is displayed in a client's 
-    terminal based on float-time [time]. 
+(** [format_time time] is the local 24-hour time that is displayed in a client's
+    terminal based on float-time [time].
     Example: [format_time 1575670849.] is ["17:20"] in Eastern Standard Time. *)
 let format_time time =
   let tm = localtime time in
@@ -70,7 +80,7 @@ let format_time time =
   in
   hour ^ ":" ^ minute
 
-let parse s =  
+let parse s =
   match (String.split_on_char '|' s) with
   | to_user :: time :: from_user :: t ->
     { to_user
@@ -101,7 +111,7 @@ let get_to_user t = t.to_user
 let format t = "[" ^ format_time t.time ^ "] " ^ t.from_user ^ ": "
 
 (** [to_string_list s] is the string [s] as a list of strings, where each string
-    in the list is either a single character or a single character with 
+    in the list is either a single character or a single character with
     formatting instructions. *)
 let rec to_string_list string =
   match string with
@@ -111,12 +121,10 @@ let rec to_string_list string =
     if String.length str = 1 then
       (str ^ "\027[0m")
       :: to_string_list (String.sub str 1 (String.length str - 1))
-      (* then (str) :: (to_string_list (String.sub str 1 ((String.length str)-1))) *)
     else
       String.sub str 0 1
       :: to_string_list (String.sub str 1 (String.length str - 1))
 
-(** [message_to_string message] is *)
 let rec message_to_string message =
   match message with
   | [] ->
@@ -128,8 +136,6 @@ let rec message_to_string message =
     @ message_to_string t
 
 let output_list t = to_string_list (format t) @ message_to_string t.message
-
-(* let get_message t = t.message |> message_to_string |> String.concat "" *)
 
 let pack_t t =
   t.to_user ^ "|" ^ string_of_float t.time ^ "|" ^ t.from_user ^ "|"
