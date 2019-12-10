@@ -60,7 +60,9 @@ let handle_msg logs users msg =
     | Status (a, r) ->
       log_out "status" ;
       let rec mem elem = function
-        | h :: t -> if String.equal (String.trim h) (String.trim elem) then true else mem elem t
+        | h :: t -> 
+          if String.equal (String.trim h) (String.trim elem) 
+          then true else mem elem t
         | [] -> false
       in
       let rec remove_from_list lst rem acc =

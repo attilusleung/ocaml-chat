@@ -113,7 +113,6 @@ let rec to_string_list string =
     if String.length str = 1 then
       (str ^ "\027[0m")
       :: to_string_list (String.sub str 1 (String.length str - 1))
-      (* then (str) :: (to_string_list (String.sub str 1 ((String.length str)-1))) *)
     else
       String.sub str 0 1
       :: to_string_list (String.sub str 1 (String.length str - 1))

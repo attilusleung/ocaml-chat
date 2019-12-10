@@ -115,6 +115,61 @@ let rec handle_connection ic oc id () =
   | None ->
     fail ClosedConnection
 
+(** [login_password u p id oc ic connection_rec] logs the user [u] in with
+    password [p]. If password is incorrect, client can try again. If username is 
+    nonexistent, client can try again. *)
+let rec login_password u p id oc ic connection_rec =
+  match Hashtbl.find_opt passwords u with
+  | None ->
+    print_endline @@ id ^ " logged in as nonexistent user " ^ u ;
+    ignore @@ Lwt_io.write_line oc encode_fail ;
+    login_connection ic oc id connection_rec ()
+  | Some pass ->
+    if not @@ String.equal pass p 
+    then begin
+      print_endline @@ id ^ " attempted login with invalid password for " ^ u ;
+      ignore @@ Lwt_io.write_line oc encode_fail ;
+      login_connection ic oc id connection_rec () 
+    end
+    else
+      Lwt_io.write_line oc @@ encode_confirm u
+      >>= fun _ ->
+      Lwt_io.write_line stdout @@ id ^ " logged in as " ^ u
+      >>= fun _ ->
+      return @@ broadcast (encode_status [u] [])
+      >>= fun _ ->
+      Lwt_io.write_line oc
+        (encode_status (Hashtbl.fold (fun a b c -> a :: c) active []) [])
+      >>= fun _ ->
+      return @@ Hashtbl.add active u connection_rec
+      >>= fun _ -> send_chatlogs oc u >>= fun _ -> return u
+
+(** [login_register u p id oc ic connection_rec] registers the user [u] with
+    their password [p], then logs them in. If username is taken, client can
+    try again. *)
+and login_register u p id oc ic connection_rec =
+  if Hashtbl.mem passwords u 
+  then begin
+    print_endline @@ id ^ " attempted to register as existing user " ^ u ;
+    ignore @@ Lwt_io.write_line oc encode_fail ;
+    login_connection ic oc id connection_rec ()
+  end
+  else begin 
+    write_passwords u p ;
+    Hashtbl.replace passwords u p ;
+    Lwt_io.write_line oc @@ encode_confirm u
+    >>= fun _ ->
+    Lwt_io.write_line stdout @@ id ^ " registered as " ^ u
+    >>= fun _ ->
+    return @@ broadcast (encode_status [u] [])
+    >>= fun _ ->
+    Lwt_io.write_line oc
+      (encode_status (Hashtbl.fold (fun a b c -> a :: c) active []) [])
+    >>= fun _ ->
+    return @@ Hashtbl.add active u connection_rec
+    >>= fun _ -> send_chatlogs oc u >>= fun _ -> return u
+  end
+
 (** [login_connection ic oc id connection ()] waits for the login command from
  * the connection with inchannel [ic], outchannel [oc], identifier [id] and
  * connection [connection]. The function loops until either the client logins
@@ -122,61 +177,20 @@ let rec handle_connection ic oc id () =
  *
  * Fails with [ClosedConnection] if the connection closes at any point during
  * the thread. *)
-let rec login_connection ic oc id connection_rec () =
+and login_connection ic oc id connection_rec () =
   let%lwt line = read_line_opt ic in
   match line with
-  | Some msg -> (
+  | Some msg -> begin
       match decode msg with
-      | Login (u, p) -> (
-          (* TODO: Currently accepts all passwords *)
-          match Hashtbl.find_opt passwords u with
-          | None ->
-            print_endline @@ id ^ " logged in as nonexistent user " ^ u ;
-            ignore @@ Lwt_io.write_line oc encode_fail ;
-            login_connection ic oc id connection_rec ()
-          | Some pass ->
-            if not @@ String.equal pass p then (
-              print_endline @@ id ^ " attempted login with invalid password for "
-                               ^ u ;
-              ignore @@ Lwt_io.write_line oc encode_fail ;
-              login_connection ic oc id connection_rec () )
-            else
-              Lwt_io.write_line oc @@ encode_confirm u
-              >>= fun _ ->
-              Lwt_io.write_line stdout @@ id ^ " logged in as " ^ u
-              >>= fun _ ->
-              return @@ broadcast (encode_status [u] [])
-              >>= fun _ ->
-              Lwt_io.write_line oc
-                (encode_status (Hashtbl.fold (fun a b c -> a :: c) active []) [])
-              >>= fun _ ->
-              return @@ Hashtbl.add active u connection_rec
-              >>= fun _ -> send_chatlogs oc u >>= fun _ -> return u )
-      | Register (u, p) ->
-        if Hashtbl.mem passwords u then (
-          print_endline @@ id ^ " attempted to register as existing user " ^ u ;
-          ignore @@ Lwt_io.write_line oc encode_fail ;
-          login_connection ic oc id connection_rec () )
-        else (
-          write_passwords u p ;
-          Hashtbl.replace passwords u p ;
-          Lwt_io.write_line oc @@ encode_confirm u
-          >>= fun _ ->
-          Lwt_io.write_line stdout @@ id ^ " registered as " ^ u
-          >>= fun _ ->
-          return @@ broadcast (encode_status [u] [])
-          >>= fun _ ->
-          Lwt_io.write_line oc
-            (encode_status (Hashtbl.fold (fun a b c -> a :: c) active []) [])
-          >>= fun _ ->
-          return @@ Hashtbl.add active u connection_rec
-          >>= fun _ -> send_chatlogs oc u >>= fun _ -> return u )
+      | Login (u, p) -> login_password u p id oc ic connection_rec
+      | Register (u, p) -> login_register u p id oc ic connection_rec
       | _ ->
         Lwt_unix.close connection_rec.file
         >>= fun _ ->
         Lwt_io.write_line stdout @@ id ^ " sent invalid login message " ^ msg
         >>= fun _ ->
-        Lwt_unix.close connection_rec.file >>= fun _ -> fail ClosedConnection )
+        Lwt_unix.close connection_rec.file >>= fun _ -> fail ClosedConnection 
+    end 
   | None ->
     fail ClosedConnection
 
@@ -197,20 +211,20 @@ let accept_connection conn =
   let connection_rec =
     {file= fd; in_channel= ic; out_channel= oc; sockadd= sa}
   in
-  ignore
-  @@ Lwt.try_bind
-    (login_connection ic oc id connection_rec)
+  ignore @@ Lwt.try_bind (login_connection ic oc id connection_rec)
     (fun user ->
-       Lwt.catch (handle_connection ic oc id) (fun e ->
-           ( match e with
-             | ClosedConnection ->
-               print_endline @@ "Connection with " ^ user ^ " (" ^ id
-                                ^ ") closed" ;
-               Hashtbl.remove active user ;
-               broadcast (encode_status [] [user])
-             | e ->
-               print_endline @@ "An error occured :" ^ to_string e ) ;
-           return ()))
+       Lwt.catch (handle_connection ic oc id) 
+         (fun e -> 
+            begin
+              match e with
+              | ClosedConnection ->
+                print_endline @@ 
+                "Connection with " ^ user ^ " (" ^ id ^ ") closed" ;
+                Hashtbl.remove active user ;
+                broadcast (encode_status [] [user])
+              | e ->
+                print_endline @@ "An error occured :" ^ to_string e end ;
+            return ()))
     (fun e ->
        match e with
        | ClosedConnection ->
@@ -262,8 +276,8 @@ let () =
                    ^ Unix.string_of_inet_addr listen_address
                    ^ ":" ^ string_of_int port ;
   get_passwords () ;
-  Lwt_main.at_exit (fun _ ->
-      return
-      @@ Hashtbl.iter (fun _ conn -> ignore @@ Lwt_unix.close conn.file) active) ;
+  Lwt_main.at_exit 
+    (fun _ -> return @@ 
+      Hashtbl.iter (fun _ conn -> ignore @@ Lwt_unix.close conn.file) active) ;
   Lwt_main.run
   @@ (serve () >>= fun _ -> Lwt_io.write_line Lwt_io.stdout "ended")
