@@ -1,4 +1,5 @@
 #directory "_build/src/client";;
+#directory "_build/src/common";;
 #directory "_build/src/server";;
 #require "unix";;
 #require "lwt";;
