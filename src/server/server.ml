@@ -31,7 +31,7 @@ let get_passwords () =
     try
       ( match input_line file |> String.split_on_char '|' with
         | h :: t ->
-          Hashtbl.add passwords h @@ (String.concat "|" t |> String.trim)
+          Hcashtbl.add passwords h @@ (String.concat "|" t |> String.trim)
         | [] ->
           () ) ;
       get_user ()
@@ -40,10 +40,8 @@ let get_passwords () =
   get_user ()
 
 let broadcast msg =
-  print_endline (Hashtbl.length active |> string_of_int) ;
   Hashtbl.iter
     (fun user conn ->
-       print_endline ("to " ^ user) ;
        ignore @@ Lwt_io.write_line conn.out_channel msg)
     active
 
