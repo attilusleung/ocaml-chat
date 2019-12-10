@@ -23,28 +23,41 @@ module Panel = struct
    * r: right
    * b: bold *)
   (* Where is unicode escapes in the Ocaml Documentation? *)
+
+  (** [hline] is the unicode character of a horizontal line *)
   let hline = "\u{2500}"
 
+  (** [hbline] is the unicode character of a horizontal bold line *)
   let hbline = "\u{2501}"
 
+  (** [vline] is the unicode character of a vertical line *)
   let vline = "\u{2502}"
 
+  (** [vbline] is the unicode character of a vertical bold line *)
   let vbline = "\u{2503}"
 
+  (** [ulcorner] is the unicode character of a upper left corner *)
   let ulcorner = "\u{250C}"
 
+  (** [ulbcorner] is the unicode character of a upper left bold corner *)
   let ulbcorner = "\u{250F}"
 
+  (** [urcorner] is the unicode character of a upper right corner *)
   let urcorner = "\u{2510}"
 
+  (** [urbcorner] is the unicode character of a upper right bold corner *)
   let urbcorner = "\u{2513}"
 
+  (** [llcorner] is the unicode character of a lower left corner *)
   let llcorner = "\u{2514}"
 
+  (** [llbcorner] is the unicode character of a lower left bold corner *)
   let llbcorner = "\u{2517}"
 
+  (** [lrcorner] is the unicode character of a lower right corner *)
   let lrcorner = "\u{2518}"
 
+  (** [lrbcorner] is the unicode character of a lower right bold corner *)
   let lrbcorner = "\u{251B}"
 
   let make x y width height =
@@ -60,7 +73,7 @@ module Panel = struct
     buffer.(t.x).(t.y) <- (if strong then ulbcorner else ulcorner) ;
     buffer.(t.x).(t.y + t.height - 1) <-
       (if strong then llbcorner else llcorner) ;
-    buffer.(t.x + t.width - 1).(t.y) <-(if strong then urbcorner else urcorner);
+    buffer.(t.x + t.width - 1).(t.y) <- (if strong then urbcorner else urcorner) ;
     buffer.(t.x + t.width - 1).(t.y + t.height - 1) <-
       (if strong then lrbcorner else lrcorner) ;
     for i = t.x + 1 to t.x + t.width - 2 do
@@ -76,6 +89,7 @@ end
 module InputPanel = struct
   open Panel
 
+  (** [max_char] is the maximum length of the input text accepted by the panel *)
   let max_char = 60
 
   type t =
@@ -95,6 +109,7 @@ module InputPanel = struct
     ; callback
     ; hidden }
 
+  (** [draw_input t buffer] draws the input text of [t] onto [buffer] *)
   let draw_input t buffer =
     (* TODO: overflow *)
     Buffer.to_seqi t.buffer
@@ -109,6 +124,8 @@ module InputPanel = struct
 
   let get_cursor t = (t.base.x + 2 + t.cursor, t.base.y + 2)
 
+  (** [add buffer i length c] adds [c] to [buffer] with length [length] at
+   * position [i] *)
   let add buffer i length c =
     if i = length then Buffer.add_char buffer c
     else
@@ -117,6 +134,8 @@ module InputPanel = struct
       Buffer.add_char buffer c ;
       Buffer.add_string buffer temp
 
+  (** [remove buffer i length] removes the character at position [i] in [buffer]
+   * which has length [length] *)
   let remove buffer i length =
     if i = length - 1 then Buffer.truncate buffer (length - 1)
     else
@@ -178,6 +197,8 @@ module MessagePanel = struct
     Hashtbl.add logs (get_selected ()) DoublyLinkedList.empty ;
     ({base= Panel.make x y width height; logs}, logs)
 
+  (** [Break] is thrown whenever we want to break out of a loop. Thank Ocaml for
+   * not having basic primitive keywords. *)
   exception Break
 
   let draw t buffer strong =
@@ -201,7 +222,7 @@ module MessagePanel = struct
           let print_list = Parser.output_list p in
           List.iteri
             (fun j c ->
-               buffer.(j + 1 + t.base.x).(t.base.y + t.base.height - i - 1) <-c)
+               buffer.(j + 1 + t.base.x).(t.base.y + t.base.height - i - 1) <- c)
             print_list ;
           match DoublyLinkedList.prev_opt !current with
           | Some t ->
@@ -229,6 +250,8 @@ end
 module StatusPanel = struct
   include Panel
 
+  (** [Break] is thrown whenever we want to break out of a loop. Thank Ocaml for
+   * not having basic primitive keywords. *)
   exception Break
 
   type t = {base: Panel.t; users: string list ref; mutable selected: int}
@@ -237,6 +260,7 @@ module StatusPanel = struct
     let pointer = ref [] in
     ({base= Panel.make x y width height; users= pointer; selected= 0}, pointer)
 
+  (** [update_passive t list] updates the list of users in [t] to [list] *)
   let update_passive t lst = t.users := lst
 
   let draw t buffer active =

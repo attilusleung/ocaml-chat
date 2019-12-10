@@ -9,9 +9,9 @@ open Parser
 open Protocol
 open ChatLog
 
-exception ClosedConnection
 (** [ClosedConnection] is the exception thrown when a connection is closed
  * either by the client or the server. *)
+exception ClosedConnection
 
 type connection =
   { file: Lwt_unix.file_descr
@@ -116,7 +116,7 @@ let rec handle_connection ic oc id () =
     fail ClosedConnection
 
 (** [login_password u p id oc ic connection_rec] logs the user [u] in with
-    password [p]. If password is incorrect, client can try again. If username is 
+    password [p]. If password is incorrect, client can try again. If username is
     nonexistent, client can try again. *)
 let rec login_password u p id oc ic connection_rec =
   match Hashtbl.find_opt passwords u with
@@ -125,11 +125,11 @@ let rec login_password u p id oc ic connection_rec =
     ignore @@ Lwt_io.write_line oc encode_fail ;
     login_connection ic oc id connection_rec ()
   | Some pass ->
-    if not @@ String.equal pass p 
+    if not @@ String.equal pass p
     then begin
       print_endline @@ id ^ " attempted login with invalid password for " ^ u ;
       ignore @@ Lwt_io.write_line oc encode_fail ;
-      login_connection ic oc id connection_rec () 
+      login_connection ic oc id connection_rec ()
     end
     else
       Lwt_io.write_line oc @@ encode_confirm u
@@ -148,13 +148,13 @@ let rec login_password u p id oc ic connection_rec =
     their password [p], then logs them in. If username is taken, client can
     try again. *)
 and login_register u p id oc ic connection_rec =
-  if Hashtbl.mem passwords u 
+  if Hashtbl.mem passwords u
   then begin
     print_endline @@ id ^ " attempted to register as existing user " ^ u ;
     ignore @@ Lwt_io.write_line oc encode_fail ;
     login_connection ic oc id connection_rec ()
   end
-  else begin 
+  else begin
     write_passwords u p ;
     Hashtbl.replace passwords u p ;
     Lwt_io.write_line oc @@ encode_confirm u
@@ -189,8 +189,8 @@ and login_connection ic oc id connection_rec () =
         >>= fun _ ->
         Lwt_io.write_line stdout @@ id ^ " sent invalid login message " ^ msg
         >>= fun _ ->
-        Lwt_unix.close connection_rec.file >>= fun _ -> fail ClosedConnection 
-    end 
+        Lwt_unix.close connection_rec.file >>= fun _ -> fail ClosedConnection
+    end
   | None ->
     fail ClosedConnection
 
@@ -213,12 +213,12 @@ let accept_connection conn =
   in
   ignore @@ Lwt.try_bind (login_connection ic oc id connection_rec)
     (fun user ->
-       Lwt.catch (handle_connection ic oc id) 
-         (fun e -> 
+       Lwt.catch (handle_connection ic oc id)
+         (fun e ->
             begin
               match e with
               | ClosedConnection ->
-                print_endline @@ 
+                print_endline @@
                 "Connection with " ^ user ^ " (" ^ id ^ ") closed" ;
                 Hashtbl.remove active user ;
                 broadcast (encode_status [] [user])
@@ -276,8 +276,8 @@ let () =
                    ^ Unix.string_of_inet_addr listen_address
                    ^ ":" ^ string_of_int port ;
   get_passwords () ;
-  Lwt_main.at_exit 
-    (fun _ -> return @@ 
+  Lwt_main.at_exit
+    (fun _ -> return @@
       Hashtbl.iter (fun _ conn -> ignore @@ Lwt_unix.close conn.file) active) ;
   Lwt_main.run
   @@ (serve () >>= fun _ -> Lwt_io.write_line Lwt_io.stdout "ended")

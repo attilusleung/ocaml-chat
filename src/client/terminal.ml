@@ -252,13 +252,13 @@ module LoginState = struct
   (** [login_panel] is the type representing all panels that are drawn in this
    * state. *)
 
-  (** [action] is the type that represents an action after recieving user 
+  (** [action] is the type that represents an action after recieving user
       input. *)
   type action = Login of (string * string) | Register
 
-  exception InvalidInput of string
   (** [InvalidInput] is thrown when there is an attempt to handle input from
    * InputPanels that are empty. *)
+  exception InvalidInput of string
 
   (** [max_name_length] is the maximum number of characters allowed in a
    * username *)
@@ -308,7 +308,7 @@ module LoginState = struct
     >>= term_update panels funcs
 
   (** [update conn panels promise resolver] is the main update loop that updates
-   * panels repeatedly until the client submits their credentials, which then 
+   * panels repeatedly until the client submits their credentials, which then
    *  the thread attempts to login to the server, repeating if it fails but
    * terminating if it succeeds. *)
   let rec update conn panels promise resolver =
