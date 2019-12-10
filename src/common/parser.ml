@@ -20,18 +20,26 @@ let format_message string_list =
     else if String.length string = 1 then string
     else
       match string.[0] with
-      | 'b' ->
-        "\027[1m"
-      | 'u' ->
-        "\027[4m"
+      | 'B' ->
+        "\027[1m"     (* bold *)
+      | 'U' -> 
+        "\027[4m"     (* underline *)
+      | 'R' ->
+        "\027[7m"     (* reversed *)
       | 'r' ->
-        "\027[31m"
+        "\027[31m"    (* red *)
       | 'g' ->
-        "\027[32m"
+        "\027[32m"    (* green *)
       | 'y' ->
-        "\027[33m"
+        "\027[33m"    (* yellow *)
+      | 'b' ->
+        "\027[34m"    (* blue *)
+      | 'p' ->
+        "\027[35;1m"  (* purple *)
+      | 'c' ->
+        "\027[36m"    (* cyan *)
       | 'n' ->
-        "\027[0m"
+        "\027[0m"     (* normal *)
       | _ ->
         string
   in
