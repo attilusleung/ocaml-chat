@@ -59,13 +59,15 @@ let get_passwords () =
   in
   get_user ()
 
+(** [write_passwords user password] adds a new user with username [user]
+    and password [password] to the passwords file. *)
 let write_passwords user password =
   let file = open_out_gen [Open_append; Open_creat] 0o640 "passwd.txt" in
   output_string file @@ user ^ "|" ^ password ^ "\n";
   Stdlib.flush file;
   close_out file
 
-(** [broadcast msg] sends [msg] to all users in [active] *)
+(** [broadcast msg] sends [msg] to all users in [active]. *)
 let broadcast msg =
   print_endline (Hashtbl.length active |> string_of_int) ;
   Hashtbl.iter
@@ -103,8 +105,8 @@ let rec handle_connection ic oc id () =
   | Some msg ->
     ( match decode msg with
       | Message m ->
-        Lwt_io.write_line stdout @@ get_from_user m ^ " sent \""
-                                    ^ get_message m ^ "\" to " ^ get_to_user m
+        Lwt_io.write_line stdout @@ 
+        get_from_user m ^ " sent \"" ^ get_message m ^ "\" to " ^ get_to_user m
         >>= fun _ ->
         log_out (pack_t m) (get_to_user m) ;
         log_out (pack_t m) (get_from_user m) ;
@@ -257,6 +259,7 @@ let rec debug_input () =
  * connections and handles them. *)
 let create_server sock =
   ignore @@ debug_input () ;
+  clear_chatlogs () ;
   let rec serve () = Lwt_unix.accept sock >>= accept_connection >>= serve in
   serve
 
