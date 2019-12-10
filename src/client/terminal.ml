@@ -256,6 +256,14 @@ module LoginState = struct
       input. *)
   type action = Login of (string * string) | Register
 
+  exception InvalidInput of string
+  (** [InvalidInput] is thrown when there is an attempt to handle input from
+   * InputPanels that are empty. *)
+
+  (** [max_name_length] is the maximum number of characters allowed in a
+   * username *)
+  let max_name_length = 15
+
   (** [active_name] is whether or not the username input panel is the current
    * active panel. *)
   let active_name = ref true
@@ -317,28 +325,48 @@ module LoginState = struct
     let%lwt act =
       pick [term_update panels get_ctrl_s (); !promise; reg_promise]
     in
-    ( match act with
-      | Login (name, pass) ->
-        send_msg conn (encode_login name pass)
-      | Register ->
-        let name = InputPanel.get_input panels.name_input in
-        let pass = InputPanel.get_input panels.pass_input in
-        send_msg conn (encode_register name pass) )
-    >>= (fun _ ->
-        get_msg conn
-        >>= fun i ->
-        log_out i ;
-        return i >>= fun i -> return (login_user i))
-    >>= fun b ->
-    if b then return ()
-    else
-      let p, r = Lwt.wait () in
-      promise := p ;
-      resolver := r ;
-      TextPanel.set_text panels.warn_text
-      @@ [ make_formatted "\027[31m"
-             (if act <> Register then "Invalid login" else "Username taken") ] ;
-      update conn panels promise resolver
+    catch
+      (fun _ ->
+         ( match act with
+           | Login (name, pass) ->
+             send_msg conn (encode_login name pass)
+           | Register ->
+             let name = InputPanel.get_input panels.name_input in
+             let pass = InputPanel.get_input panels.pass_input in
+             if name = "" || pass = "" then
+               raise @@ InvalidInput "Username/Password cannot be empty"
+             else if String.length name > max_name_length then
+               raise
+               @@ InvalidInput
+                 ( "Username cannot be more than "
+                   ^ string_of_int max_name_length
+                   ^ " characters long" )
+             else send_msg conn (encode_register name pass) )
+         >>= (fun _ ->
+             get_msg conn
+             >>= fun i ->
+             log_out i ;
+             return i >>= fun i -> return (login_user i))
+         >>= fun b ->
+         if b then return ()
+         else
+           let p, r = Lwt.wait () in
+           promise := p ;
+           resolver := r ;
+           TextPanel.set_text panels.warn_text
+           @@ [ make_formatted "\027[31m"
+                  (if act <> Register then "Invalid login" else "Username taken")
+              ] ;
+           update conn panels promise resolver)
+      (function
+        | InvalidInput e ->
+          let p, r = Lwt.wait () in
+          promise := p ;
+          resolver := r ;
+          TextPanel.set_text panels.warn_text @@ [make_formatted "\027[31m" e] ;
+          update conn panels promise resolver
+        | e ->
+          raise e)
 
   (** [init conn ()] initializes the LoginState with connection [conn] *)
   let init conn () =
@@ -362,7 +390,7 @@ module LoginState = struct
     in
     let name_text = TextPanel.make 5 8 [make_formatted "" "Username: "] in
     let pass_text = TextPanel.make 5 11 [make_formatted "" "Password: "] in
-    let warn_text = TextPanel.make 0 2 [] in
+    let warn_text = TextPanel.make 5 6 [] in
     let input_callback _ =
       let name = InputPanel.get_input (Option.get !panel_ref).name_input in
       let pass = InputPanel.get_input (Option.get !panel_ref).pass_input in

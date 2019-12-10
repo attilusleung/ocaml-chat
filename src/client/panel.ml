@@ -76,6 +76,8 @@ end
 module InputPanel = struct
   open Panel
 
+  let max_char = 60
+
   type t =
     { base: Panel.t
     ; buffer: Buffer.t
@@ -126,10 +128,12 @@ module InputPanel = struct
     match input with
     | Char c ->
       (* TODO: What do we do if the message length is larger than box width? *)
-      add t.buffer t.cursor t.length c ;
-      t.cursor <- t.cursor + 1 ;
-      t.length <- t.length + 1 ;
-      return ()
+      if max_char <= t.length then return ()
+      else (
+        add t.buffer t.cursor t.length c ;
+        t.cursor <- t.cursor + 1 ;
+        t.length <- t.length + 1 ;
+        return () )
     | Backspace ->
       if t.cursor > 0 then (
         remove t.buffer (t.cursor - 1) t.length ;
