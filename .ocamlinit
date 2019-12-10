@@ -4,5 +4,8 @@
 #require "unix";;
 #require "lwt";;
 #require "lwt.unix";;
+#require "ANSITerminal";;
+#require "oUnit";;
+#require "lwt_ppx";;
 #thread;;
 #load_rec  "network.cmo";;
