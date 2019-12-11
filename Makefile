@@ -1,7 +1,7 @@
 MODULES=src/client/doublyLinkedList src/client/panel src/client/key src/client/client src/common/parser src/common/protocol src/client/network
 MLS_WITHOUT_MLIS=src/client/terminal src/client/log src/server/server src/server/chatLog
-MLS=$(MODULES:=.ml) $(MLS_WITHOUT_MLIS:=.ml)
-MLIS=$(MODULES:=.mli)
+MLS=$(MODULES:=.ml) $(MLS_WITHOUT_MLIS:=.ml) src/authors.ml
+MLIS=$(MODULES:=.mli) src/authors.mli
 CLIENTLOC=src/client/
 CLIENT=terminal.native
 SERVELOC=src/server/
@@ -43,5 +43,8 @@ docs-private: build
 
 clean:
 	$(OCAMLBUILD) -clean
-	rm -rf doc.public doc.private
+	rm -rf doc.public doc.private src.zip
 	$(OCAMLBUILD) $(OBJECTS)
+
+zip:
+	zip src.zip ./chatlogs/.placeholder $(MLS) $(MLIS) _tags INSTALL.md Makefile passwd.txt README.md
