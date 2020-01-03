@@ -1,2 +1,7 @@
 yeet|1234
 hmm|1
+lol|1
+jasper|1234567890
+asdfghjkl|10101010
+Colin|asdfg
+EMOTE HI_SRDK_DEV_GetHddInfo MCTP/1.0|
